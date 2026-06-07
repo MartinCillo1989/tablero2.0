@@ -43,6 +43,170 @@ INDEX_STRING = '''
 '''
 
 
+def _tab_dashboard():
+    return dcc.Tab(label="📊  Dashboard", value="tab_dashboard", children=[
+        html.Div(style={"marginTop": "20px"}, children=[
+            html.Div(id="kpis", style={"display": "flex", "gap": "14px", "flexWrap": "wrap", "marginBottom": "24px"}),
+            html.Div(
+                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "20px"},
+                children=[
+                    panel([section_title("Motivos de No Venta"),
+                           dcc.Graph(id="motivos_bar", style={"height": "360px"}, config={"displayModeBar": False})]),
+                    panel([section_title("Mix por Marca — Cantidades Totales"),
+                           dcc.Graph(id="mix_bar", style={"height": "360px"}, config={"displayModeBar": False}),
+                           html.Div(id="mix_obj_box", style={
+                               "marginTop": "14px", "backgroundColor": "#1a2035",
+                               "border": "1px solid rgba(59,130,246,0.15)",
+                               "borderRadius": "12px", "padding": "14px 16px",
+                           })]),
+                ],
+            ),
+            html.Div(style={"marginTop": "20px"}),
+            panel([
+                section_title("Resumen de Ventas por Vendedor / Semana"),
+                dash_table.DataTable(
+                    id="ventas_sem_tbl", page_size=20, sort_action="native",
+                    sort_mode="multi", filter_action="native",
+                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
+                    style_data_conditional=[
+                        {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
+                        {"if": {"column_id": "Importe Final"}, "fontWeight": "700", "color": "#22c55e"},
+                        {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
+                    ],
+                ),
+            ]),
+            html.Div(style={"marginTop": "20px"}),
+            html.Div(
+                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "12px"},
+                children=[
+                    section_title("Jornada por Día — desde Visitas", style={"color": "#e2e8f0", "marginBottom": "0", "fontSize": "14px"}),
+                    html.Button("⬇  Descargar Excel", id="btn_download_jornada", n_clicks=0, style={
+                        "height": "36px", "cursor": "pointer",
+                        "background": "linear-gradient(135deg, #14532d 0%, #166534 100%)",
+                        "color": "#86efac", "border": "1px solid rgba(34,197,94,0.35)",
+                        "borderRadius": "10px", "padding": "0 16px",
+                        "fontWeight": "600", "fontSize": "12px", "fontFamily": FONT,
+                    }),
+                ],
+            ),
+            dcc.Download(id="download_jornada_excel"),
+            panel([
+                dash_table.DataTable(
+                    id="jornada_tbl", page_size=15, sort_action="native", sort_mode="multi",
+                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
+                    style_data_conditional=[
+                        {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
+                        {"if": {"filter_query": "{hs_trab} < 8", "column_id": "hs_trab_hhmm"}, "backgroundColor": "rgba(239,68,68,0.12)", "color": "#fca5a5", "fontWeight": "700"},
+                        {"if": {"filter_query": '{inicio_obj} = "✅"', "column_id": "inicio_obj"}, "color": "#4ade80", "fontWeight": "700", "fontSize": "16px"},
+                        {"if": {"filter_query": '{inicio_obj} = "❌"', "column_id": "inicio_obj"}, "color": "#f87171", "fontWeight": "700", "fontSize": "16px"},
+                        {"if": {"filter_query": '{inicio_obj} = "—"', "column_id": "inicio_obj"}, "color": "#64748b"},
+                        {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
+                    ],
+                ),
+            ]),
+            html.Div(style={"marginTop": "20px"}),
+            html.Div(
+                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "12px"},
+                children=[
+                    section_title("Clientes Inactivos — Último Mes", style={"color": "#e2e8f0", "marginBottom": "0", "fontSize": "14px"}),
+                    html.Div("Fuente: control_clientes_inactivos.xlsx", style={"fontSize": "11px", "color": "#475569", "fontFamily": FONT}),
+                ],
+            ),
+            panel([
+                dash_table.DataTable(
+                    id="inactivos_tbl", page_size=20, sort_action="native", sort_mode="multi", filter_action="native",
+                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
+                    style_data_conditional=[
+                        {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
+                        {"if": {"column_id": "Total inactivos"}, "fontWeight": "700", "color": "#fbbf24"},
+                        {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
+                    ],
+                ),
+            ], {"marginBottom": "40px"}),
+        ]),
+    ])
+
+
+def _tab_rankings():
+    return dcc.Tab(label="🏆  Rankings", value="tab_rankings", children=[
+        html.Div(style={"marginTop": "20px"}, children=[
+            html.Div(id="ranking_periodo_label", style={"fontSize": "12px", "color": "#64748b", "fontFamily": FONT, "marginBottom": "20px"}),
+            _rank_section("🏆", "Mejores Vendedores",         "#fbbf24", "tbl_mejores"),
+            _rank_section("💀", "Peores Vendedores",          "#f87171", "tbl_peores"),
+            _rank_section("📈", "Mejoraron vs Mes Anterior",  "#4ade80", "tbl_mejoraron"),
+            _rank_section("📉", "Empeoraron vs Mes Anterior", "#f87171", "tbl_empeoraron"),
+            html.Div(style={"display": "flex", "alignItems": "center", "gap": "10px", "marginBottom": "12px"},
+                     children=[html.Span("👥", style={"fontSize": "20px"}),
+                               section_title("Clientes Inactivos — Todos los Vendedores", style={"color": "#94a3b8", "marginBottom": "0", "fontSize": "14px"})]),
+            panel([
+                dash_table.DataTable(
+                    id="tbl_inactivos_todos", page_size=30, sort_action="native", sort_mode="multi", filter_action="native",
+                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
+                    style_data_conditional=[
+                        {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
+                        {"if": {"column_id": "Total inactivos"},    "fontWeight": "700", "color": "#fbbf24"},
+                        {"if": {"column_id": "Inactivos mes ant."}, "color": "#94a3b8"},
+                        {"if": {"filter_query": '{Variación} contains "▲"', "column_id": "Variación"}, "color": "#f87171", "fontWeight": "700"},
+                        {"if": {"filter_query": '{Variación} contains "▼"', "column_id": "Variación"}, "color": "#4ade80", "fontWeight": "700"},
+                        {"if": {"filter_query": '{Variación} = "→ 0"',       "column_id": "Variación"}, "color": "#94a3b8"},
+                        {"if": {"column_id": "% Inactivos"}, "color": "#f59e0b"},
+                        {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
+                    ],
+                ),
+            ], {"marginBottom": "24px"}),
+            html.Div(style={"display": "flex", "alignItems": "center", "gap": "10px", "marginBottom": "12px"},
+                     children=[html.Span("🚬", style={"fontSize": "20px"}),
+                               section_title("Objetivo Corona — Cumplimiento por Vendedor", style={"color": "#f59e0b", "marginBottom": "0", "fontSize": "14px"})]),
+            panel([
+                dash_table.DataTable(
+                    id="tbl_corona", page_size=30, sort_action="native", sort_mode="multi",
+                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
+                    style_data_conditional=[
+                        {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
+                        {"if": {"filter_query": '{Cumple} = "✅"', "column_id": "Cumple"}, "color": "#4ade80", "fontWeight": "700", "fontSize": "16px"},
+                        {"if": {"filter_query": '{Cumple} = "❌"', "column_id": "Cumple"}, "color": "#f87171", "fontWeight": "700", "fontSize": "16px"},
+                        {"if": {"column_id": "% Cumpl. Actual"}, "fontWeight": "700", "color": "#fbbf24"},
+                        {"if": {"column_id": "Corona Vendido"},  "color": "#f59e0b"},
+                        {"if": {"column_id": "Vendedor"},        "textAlign": "left", "fontWeight": "600", "color": "#e2e8f0"},
+                        {"if": {"column_id": "Pos."},            "fontWeight": "700", "color": "#7ea3c4", "width": "40px"},
+                        {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
+                    ],
+                ),
+            ], {"marginBottom": "40px"}),
+        ]),
+    ])
+
+
+def _tab_resumen():
+    return dcc.Tab(label="👤  Resumen por Vendedor", value="tab_resumen", children=[
+        html.Div(style={"marginTop": "20px"}, children=[
+            html.Div([
+                filter_label("Seleccioná un vendedor"),
+                dcc.Dropdown(
+                    id="f_vend_resumen",
+                    options=[],
+                    value=None,
+                    clearable=True,
+                    placeholder="Elegí un vendedor...",
+                    style=DROPDOWN_STYLE,
+                ),
+            ], style={"maxWidth": "400px", "marginBottom": "24px"}),
+            html.Div(id="resumen_cards", style={"display": "flex", "flexDirection": "column"}),
+        ]),
+    ])
+
+
+def _rank_section(emoji, title_text, color, table_id):
+    return html.Div([
+        html.Div(
+            style={"display": "flex", "alignItems": "center", "gap": "10px", "marginBottom": "12px"},
+            children=[html.Span(emoji, style={"fontSize": "20px"}),
+                      section_title(title_text, style={"color": color, "marginBottom": "0", "fontSize": "14px"})],
+        ),
+        panel([ranking_table(table_id)], {"marginBottom": "24px"}),
+    ])
+
+
 def build_layout():
     return html.Div(
         style={
@@ -53,7 +217,6 @@ def build_layout():
             "color": "#e2e8f0",
         },
         children=[
-
             # ── Header ──────────────────────────────────────
             html.Div(
                 style={
@@ -99,179 +262,12 @@ def build_layout():
                 children=[
                     html.Div([filter_label("Año"),   dcc.Dropdown(id="f_year",  options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
                     html.Div([filter_label("Mes"),   dcc.Dropdown(id="f_month", options=[{"label": f"{m:02d}", "value": m} for m in range(1, 13)], value=date.today().month, clearable=True, style=DROPDOWN_STYLE)]),
-                    html.Div([filter_label("Semana (Lun – Dom)"), dcc.Dropdown(id="f_week", options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
+                    html.Div([filter_label("Semana (Lun - Dom)"), dcc.Dropdown(id="f_week", options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
                     html.Div([filter_label("Vendedor"),           dcc.Dropdown(id="f_vend", options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
                 ],
             ),
 
-            # ── Tabs ────────────────────────────────────────
-            dcc.Tabs(
-                id="main_tabs", value="tab_dashboard",
-                colors={"border": "rgba(255,255,255,0.07)", "primary": "#3b82f6", "background": "#0d1117"},
-                children=[
-
-                    # ── Tab Dashboard ────────────────────────
-                    dcc.Tab(label="📊  Dashboard", value="tab_dashboard", children=[
-                        html.Div(style={"marginTop": "20px"}, children=[
-                            html.Div(id="kpis", style={"display": "flex", "gap": "14px", "flexWrap": "wrap", "marginBottom": "24px"}),
-                            html.Div(
-                                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "20px"},
-                                children=[
-                                    panel([section_title("Motivos de No Venta"),
-                                           dcc.Graph(id="motivos_bar", style={"height": "360px"}, config={"displayModeBar": False})]),
-                                    panel([section_title("Mix por Marca — Cantidades Totales"),
-                                           dcc.Graph(id="mix_bar", style={"height": "360px"}, config={"displayModeBar": False}),
-                                           html.Div(id="mix_obj_box", style={
-                                               "marginTop": "14px", "backgroundColor": "#1a2035",
-                                               "border": "1px solid rgba(59,130,246,0.15)",
-                                               "borderRadius": "12px", "padding": "14px 16px",
-                                           })]),
-                                ],
-                            ),
-                            html.Div(style={"marginTop": "20px"}),
-                            panel([
-                                section_title("Resumen de Ventas por Vendedor / Semana"),
-                                dash_table.DataTable(
-                                    id="ventas_sem_tbl", page_size=20, sort_action="native",
-                                    sort_mode="multi", filter_action="native",
-                                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
-                                    style_data_conditional=[
-                                        {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
-                                        {"if": {"column_id": "Importe Final"}, "fontWeight": "700", "color": "#22c55e"},
-                                        {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
-                                    ],
-                                ),
-                            ]),
-                            html.Div(style={"marginTop": "20px"}),
-                            html.Div(
-                                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "12px"},
-                                children=[
-                                    section_title("Jornada por Día — desde Visitas", style={"color": "#e2e8f0", "marginBottom": "0", "fontSize": "14px"}),
-                                    html.Button("⬇  Descargar Excel", id="btn_download_jornada", n_clicks=0, style={
-                                        "height": "36px", "cursor": "pointer",
-                                        "background": "linear-gradient(135deg, #14532d 0%, #166534 100%)",
-                                        "color": "#86efac", "border": "1px solid rgba(34,197,94,0.35)",
-                                        "borderRadius": "10px", "padding": "0 16px",
-                                        "fontWeight": "600", "fontSize": "12px", "fontFamily": FONT,
-                                    }),
-                                ],
-                            ),
-                            dcc.Download(id="download_jornada_excel"),
-                            panel([
-                                dash_table.DataTable(
-                                    id="jornada_tbl", page_size=15, sort_action="native", sort_mode="multi",
-                                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
-                                    style_data_conditional=[
-                                        {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
-                                        {"if": {"filter_query": "{hs_trab} < 8", "column_id": "hs_trab_hhmm"}, "backgroundColor": "rgba(239,68,68,0.12)", "color": "#fca5a5", "fontWeight": "700"},
-                                        {"if": {"filter_query": '{inicio_obj} = "✅"', "column_id": "inicio_obj"}, "color": "#4ade80", "fontWeight": "700", "fontSize": "16px"},
-                                        {"if": {"filter_query": '{inicio_obj} = "❌"', "column_id": "inicio_obj"}, "color": "#f87171", "fontWeight": "700", "fontSize": "16px"},
-                                        {"if": {"filter_query": '{inicio_obj} = "—"', "column_id": "inicio_obj"}, "color": "#64748b"},
-                                        {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
-                                    ],
-                                ),
-                            ]),
-                            html.Div(style={"marginTop": "20px"}),
-                            html.Div(
-                                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "12px"},
-                                children=[
-                                    section_title("Clientes Inactivos — Último Mes", style={"color": "#e2e8f0", "marginBottom": "0", "fontSize": "14px"}),
-                                    html.Div("Fuente: control_clientes_inactivos.xlsx", style={"fontSize": "11px", "color": "#475569", "fontFamily": FONT}),
-                                ],
-                            ),
-                            panel([
-                                dash_table.DataTable(
-                                    id="inactivos_tbl", page_size=20, sort_action="native", sort_mode="multi", filter_action="native",
-                                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
-                                    style_data_conditional=[
-                                        {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
-                                        {"if": {"column_id": "Total inactivos"}, "fontWeight": "700", "color": "#fbbf24"},
-                                        {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
-                                    ],
-                                ),
-                            ], {"marginBottom": "40px"}),
-                        ]),
-                    ]),
-
-                    # ── Tab Rankings ─────────────────────────
-                    dcc.Tab(label="🏆  Rankings", value="tab_rankings", children=[
-                        html.Div(style={"marginTop": "20px"}, children=[
-                            html.Div(id="ranking_periodo_label", style={"fontSize": "12px", "color": "#64748b", "fontFamily": FONT, "marginBottom": "20px"}),
-                            _rank_section("🏆", "Mejores Vendedores",               "#fbbf24", "tbl_mejores"),
-                            _rank_section("💀", "Peores Vendedores",                "#f87171", "tbl_peores"),
-                            _rank_section("📈", "Mejoraron vs Mes Anterior",        "#4ade80", "tbl_mejoraron"),
-                            _rank_section("📉", "Empeoraron vs Mes Anterior",       "#f87171", "tbl_empeoraron"),
-                            html.Div(style={"display": "flex", "alignItems": "center", "gap": "10px", "marginBottom": "12px"},
-                                     children=[html.Span("👥", style={"fontSize": "20px"}),
-                                               section_title("Clientes Inactivos — Todos los Vendedores", style={"color": "#94a3b8", "marginBottom": "0", "fontSize": "14px"})]),
-                            panel([
-                                dash_table.DataTable(
-                                    id="tbl_inactivos_todos", page_size=30, sort_action="native", sort_mode="multi", filter_action="native",
-                                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
-                                    style_data_conditional=[
-                                        {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
-                                        {"if": {"column_id": "Total inactivos"},  "fontWeight": "700", "color": "#fbbf24"},
-                                        {"if": {"column_id": "Inactivos mes ant."}, "color": "#94a3b8"},
-                                        {"if": {"filter_query": '{Variación} contains "▲"', "column_id": "Variación"}, "color": "#f87171", "fontWeight": "700"},
-                                        {"if": {"filter_query": '{Variación} contains "▼"', "column_id": "Variación"}, "color": "#4ade80", "fontWeight": "700"},
-                                        {"if": {"filter_query": '{Variación} = "→ 0"',       "column_id": "Variación"}, "color": "#94a3b8"},
-                                        {"if": {"column_id": "% Inactivos"}, "color": "#f59e0b"},
-                                        {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
-                                    ],
-                                ),
-                            ], {"marginBottom": "24px"}),
-                            html.Div(style={"display": "flex", "alignItems": "center", "gap": "10px", "marginBottom": "12px"},
-                                     children=[html.Span("🚬", style={"fontSize": "20px"}),
-                                               section_title("Objetivo Corona — Cumplimiento por Vendedor", style={"color": "#f59e0b", "marginBottom": "0", "fontSize": "14px"})]),
-                            panel([
-                                dash_table.DataTable(
-                                    id="tbl_corona", page_size=30, sort_action="native", sort_mode="multi",
-                                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
-                                    style_data_conditional=[
-                                        {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
-                                        {"if": {"filter_query": '{Cumple} = "✅"', "column_id": "Cumple"}, "color": "#4ade80", "fontWeight": "700", "fontSize": "16px"},
-                                        {"if": {"filter_query": '{Cumple} = "❌"', "column_id": "Cumple"}, "color": "#f87171", "fontWeight": "700", "fontSize": "16px"},
-                                        {"if": {"column_id": "% Cumpl. Actual"},  "fontWeight": "700", "color": "#fbbf24"},
-                                        {"if": {"column_id": "Corona Vendido"},   "color": "#f59e0b"},
-                                        {"if": {"column_id": "Vendedor"},         "textAlign": "left", "fontWeight": "600", "color": "#e2e8f0"},
-                                        {"if": {"column_id": "Pos."},             "fontWeight": "700", "color": "#7ea3c4", "width": "40px"},
-                                        {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
-                                    ],
-                                ),
-                            ], {"marginBottom": "40px"}),
-                        ]),
-                    ]),
-
-                    # ── Tab Resumen por Vendedor ─────────────
-                    dcc.Tab(label="👤  Resumen por Vendedor", value="tab_resumen", children=[
-                        html.Div(style={"marginTop": "20px"}, children=[
-                            html.Div([
-                                filter_label("Seleccioná un vendedor"),
-                                dcc.Dropdown(
-                                    id="f_vend_resumen",
-                                    options=[],
-                                    value=None,
-                                    clearable=True,
-                                    placeholder="Elegí un vendedor...",
-                                    style=DROPDOWN_STYLE,
-                                ),
-                            ], style={"maxWidth": "400px", "marginBottom": "24px"}),
-                            html.Div(id="resumen_cards", style={"display": "flex", "flexDirection": "column"}),
-                        ]),
-                    ]),
-                ],
-            ),
+            # ── Tabs (se renderizan según el rol del usuario) ─
+            html.Div(id="tabs_container"),
         ],
     )
-
-
-def _rank_section(emoji, title_text, color, table_id):
-    from ui.components import ranking_table
-    return html.Div([
-        html.Div(
-            style={"display": "flex", "alignItems": "center", "gap": "10px", "marginBottom": "12px"},
-            children=[html.Span(emoji, style={"fontSize": "20px"}),
-                      section_title(title_text, style={"color": color, "marginBottom": "0", "fontSize": "14px"})],
-        ),
-        panel([ranking_table(table_id)], {"marginBottom": "24px"}),
-    ])

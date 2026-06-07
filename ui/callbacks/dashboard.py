@@ -17,7 +17,32 @@ from ui.components import kpi_card
 
 def register(app):
 
-    # ── Año + reload ────────────────────────────────────────────
+    # ── Tabs según rol ───────────────────────────────────────
+    @app.callback(
+        Output("tabs_container", "children"),
+        Input("btn_reload", "n_clicks"),
+    )
+    def build_tabs(n):
+        from flask import request as flask_request
+        from ui.layout import _tab_dashboard, _tab_rankings, _tab_resumen
+        auth = flask_request.authorization
+        usuario = auth.username.lower() if auth else ""
+        es_super = usuario in app.SUPERVISORES
+
+        if es_super:
+            tabs = [_tab_dashboard(), _tab_rankings(), _tab_resumen()]
+            default = "tab_dashboard"
+        else:
+            tabs = [_tab_resumen()]
+            default = "tab_resumen"
+
+        return dcc.Tabs(
+            id="main_tabs", value=default,
+            colors={"border": "rgba(255,255,255,0.07)", "primary": "#3b82f6", "background": "#0d1117"},
+            children=tabs,
+        )
+
+
     @app.callback(
         Output("f_year", "options"),
         Output("f_year", "value"),

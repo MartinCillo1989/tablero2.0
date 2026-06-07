@@ -1,4 +1,5 @@
 from dash import Dash
+from dash_auth import BasicAuth
 
 from data.cache import CACHE
 from ui.layout import build_layout, INDEX_STRING
@@ -13,6 +14,15 @@ from ui.callbacks import dashboard, rankings, resumen
 dashboard.register(app)
 rankings.register(app)
 resumen.register(app)
+
+# Usuarios y contraseñas
+USERS = {
+    "hugo":   "hugo",
+    "ariel":  "ariel",
+    "matias": "matias",
+    "martin": "martin",
+}
+BasicAuth(app, USERS)
 
 # Gunicorn necesita esta variable
 server = app.server

@@ -25,13 +25,17 @@ INDEX_STRING = '''
     ::-webkit-scrollbar-track { background: #0d1117; }
     ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
-    .Select-control, .Select-menu-outer { background-color: #1a2035 !important; border-color: rgba(255,255,255,0.1) !important; color: #e2e8f0 !important; }
-    .Select-placeholder, .Select-value-label { color: #94a3b8 !important; }
+    .Select-control { background-color: #0d1117 !important; border-color: rgba(255,255,255,0.1) !important; }
+    .Select-menu-outer { background-color: #0d1117 !important; border-color: rgba(255,255,255,0.1) !important; }
+    .Select-placeholder { color: #64748b !important; }
+    .Select-value-label { color: #e2e8f0 !important; }
+    .Select-input input { color: #e2e8f0 !important; background: transparent !important; }
     .Select-arrow-zone .Select-arrow { border-top-color: #64748b !important; }
     .is-open .Select-arrow { border-bottom-color: #64748b !important; }
-    .Select-option { background: #1a2035 !important; color: #cbd5e1 !important; }
-    .Select-option:hover, .Select-option.is-focused { background: #243050 !important; }
-    .Select-option.is-selected { background: #1d3566 !important; color: #60a5fa !important; }
+    .Select-option { background-color: #0d1117 !important; color: #e2e8f0 !important; }
+    .Select-option:hover, .Select-option.is-focused { background-color: #1a2035 !important; }
+    .Select-option.is-selected { background-color: #1d3566 !important; color: #60a5fa !important; }
+    .VirtualizedSelectOption { background-color: #0d1117 !important; color: #e2e8f0 !important; }
     .dash-spreadsheet-container .dash-spreadsheet-inner tr:hover td { background-color: rgba(59,130,246,0.06) !important; }
   </style>
 </head>

@@ -37,6 +37,10 @@ INDEX_STRING = '''
     .Select-option.is-selected { background-color: #1d3566 !important; color: #60a5fa !important; }
     .VirtualizedSelectOption { background-color: #0d1117 !important; color: #e2e8f0 !important; }
     .dash-spreadsheet-container .dash-spreadsheet-inner tr:hover td { background-color: rgba(59,130,246,0.06) !important; }
+    @media (max-width: 600px) {
+      h1 { font-size: 24px !important; }
+      .dash-tab { padding: 8px 10px !important; font-size: 11px !important; }
+    }
   </style>
 </head>
 <body>
@@ -50,9 +54,9 @@ INDEX_STRING = '''
 def _tab_dashboard():
     return dcc.Tab(label="📊  Dashboard", value="tab_dashboard", children=[
         html.Div(style={"marginTop": "20px"}, children=[
-            html.Div(id="kpis", style={"display": "flex", "gap": "14px", "flexWrap": "wrap", "marginBottom": "24px"}),
+            html.Div(id="kpis", style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(140px, 1fr))", "gap": "12px", "marginBottom": "24px"}),
             html.Div(
-                style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "20px"},
+                style={"display": "grid", "gridTemplateColumns": "repeat(auto-fit, minmax(300px, 1fr))", "gap": "20px"},
                 children=[
                     panel([section_title("Motivos de No Venta"),
                            dcc.Graph(id="motivos_bar", style={"height": "360px"}, config={"displayModeBar": False})]),
@@ -215,7 +219,7 @@ def build_layout():
     return html.Div(
         style={
             "fontFamily": FONT,
-            "padding": "24px 28px",
+            "padding": "16px",
             "backgroundColor": "#0d1117",
             "minHeight": "100vh",
             "color": "#e2e8f0",
@@ -256,18 +260,19 @@ def build_layout():
             # ── Filtros ─────────────────────────────────────
             html.Div(
                 style={
-                    "display": "grid", "gridTemplateColumns": "160px 160px 1fr 1fr",
-                    "gap": "16px", "marginBottom": "24px",
+                    "display": "grid",
+                    "gridTemplateColumns": "repeat(auto-fit, minmax(140px, 1fr))",
+                    "gap": "12px", "marginBottom": "24px",
                     "backgroundColor": "#161b27",
                     "border": "1px solid rgba(255,255,255,0.07)",
-                    "borderRadius": "16px", "padding": "18px 22px",
+                    "borderRadius": "16px", "padding": "16px 18px",
                     "boxShadow": "0 4px 20px rgba(0,0,0,0.35)",
                 },
                 children=[
                     html.Div([filter_label("Año"),   dcc.Dropdown(id="f_year",  options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
                     html.Div([filter_label("Mes"),   dcc.Dropdown(id="f_month", options=[{"label": f"{m:02d}", "value": m} for m in range(1, 13)], value=date.today().month, clearable=True, style=DROPDOWN_STYLE)]),
-                    html.Div([filter_label("Semana (Lun - Dom)"), dcc.Dropdown(id="f_week", options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
-                    html.Div([filter_label("Vendedor"),           dcc.Dropdown(id="f_vend", options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
+                    html.Div([filter_label("Semana"), dcc.Dropdown(id="f_week", options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
+                    html.Div([filter_label("Vendedor"), dcc.Dropdown(id="f_vend", options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
                 ],
             ),
 

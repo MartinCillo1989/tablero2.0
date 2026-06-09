@@ -188,7 +188,6 @@ def register(app):
         if not ventas_sem.empty:
             show = ventas_sem.copy()
             show["Cantidades Totales"] = show["Cantidades Totales"].apply(lambda x: f"{float(x):,.2f}")
-            show["Importe Final"]      = show["Importe Final"].apply(lambda x: f"$ {float(x):,.0f}".replace(",", "."))
             ventas_sem_data = show.to_dict("records")
             ventas_sem_cols = [{"name": c, "id": c} for c in show.columns]
 

@@ -34,13 +34,12 @@ def compute_kpis(vis_df: pd.DataFrame, ven_df: pd.DataFrame) -> dict:
         sin_hora_visita = vis_df["Hora visita"].isna()
         no_visitados    = int((sin_hora_visita & sin_venta & sin_hora_motivo & sin_texto).sum())
 
-    imp_final  = float(ven_df["Importes Finales"].sum())  if "Importes Finales"   in ven_df.columns else 0.0
     cant_total = float(ven_df["Cantidades Totales"].sum()) if "Cantidades Totales" in ven_df.columns else 0.0
 
     return {
         "Visitas": total_visitas, "Ventas": ventas, "No ventas": no_ventas,
         "No ventas sin motivo": sin_motivo, "No visitados": no_visitados,
-        "Importe Final": imp_final, "Cantidades": cant_total,
+        "Cantidades": cant_total,
     }
 
 
@@ -97,7 +96,7 @@ def build_jornada_df(vis_f: pd.DataFrame) -> pd.DataFrame:
 # VENTAS SEMANALES
 # ======================================================
 def build_ventas_semanales_df(ven_f: pd.DataFrame) -> pd.DataFrame:
-    cols = ["Semana", "Vendedor", "Facturas", "Cantidades Totales", "Importe Final"]
+    cols = ["Semana", "Vendedor", "Facturas", "Cantidades Totales"]
     if not isinstance(ven_f, pd.DataFrame) or ven_f.empty:
         return pd.DataFrame(columns=cols)
 
@@ -108,9 +107,8 @@ def build_ventas_semanales_df(ven_f: pd.DataFrame) -> pd.DataFrame:
         tmp["vendedor"] = tmp.get("Vendedor según comprobante", "").apply(normalize_vendor)
 
     tmp["Cantidades Totales"] = pd.to_numeric(tmp.get("Cantidades Totales", 0), errors="coerce").fillna(0)
-    tmp["Importes Finales"]   = pd.to_numeric(tmp.get("Importes Finales",   0), errors="coerce").fillna(0)
 
-    agg_dict = {"Cantidades Totales": "sum", "Importes Finales": "sum"}
+    agg_dict = {"Cantidades Totales": "sum"}
     if "Cantidad de Facturas" in tmp.columns:
         tmp["Cantidad de Facturas"] = pd.to_numeric(tmp["Cantidad de Facturas"], errors="coerce").fillna(0)
         agg_dict["Cantidad de Facturas"] = "sum"
@@ -124,7 +122,6 @@ def build_ventas_semanales_df(ven_f: pd.DataFrame) -> pd.DataFrame:
         .rename(columns={
             "week_label":          "Semana",
             "vendedor":            "Vendedor",
-            "Importes Finales":    "Importe Final",
             "Cantidad de Facturas":"Facturas",
             "_facturas_calc":      "Facturas",
         })
@@ -138,7 +135,6 @@ def build_ventas_semanales_df(ven_f: pd.DataFrame) -> pd.DataFrame:
 
     resumen["_orden"] = resumen["Semana"].apply(week_order)
     resumen = resumen.sort_values(["_orden", "Vendedor"]).drop(columns=["_orden"])
-    resumen["Facturas"]          = pd.to_numeric(resumen["Facturas"],          errors="coerce").fillna(0).round(0).astype(int)
+    resumen["Facturas"]           = pd.to_numeric(resumen["Facturas"],           errors="coerce").fillna(0).round(0).astype(int)
     resumen["Cantidades Totales"] = pd.to_numeric(resumen["Cantidades Totales"], errors="coerce").fillna(0).round(2)
-    resumen["Importe Final"]      = pd.to_numeric(resumen["Importe Final"],      errors="coerce").fillna(0).round(0)
     return resumen[cols]

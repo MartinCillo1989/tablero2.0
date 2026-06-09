@@ -135,17 +135,14 @@ def build_rankings(vis_df: pd.DataFrame, ven_df: pd.DataFrame, year=None, month=
     def fmt_row(row):
         return {
             "Vendedor":       row["vendedor"],
-            "Importe Actual": f"$ {row['importe_cur']:,.0f}",
-            "Importe Ant.":   f"$ {row['importe_prev']:,.0f}",
-            "Δ Importe":      f"{'▲' if row['Δ Importe'] >= 0 else '▼'} $ {abs(row['Δ Importe']):,.0f} ({row['Δ% Importe']:+.1f}%)",
             "Cant. Actual":   f"{row['cantidades_cur']:,.2f}",
             "Cant. Ant.":     f"{row['cantidades_prev']:,.2f}",
             "Δ Cantidades":   f"{'▲' if row['Δ Cantidades'] >= 0 else '▼'} {abs(row['Δ Cantidades']):,.2f} ({row['Δ% Cantidades']:+.1f}%)",
             "Visitas Actual": int(row["visitas_cur"]),
             "Visitas Ant.":   int(row["visitas_prev"]),
             "Δ Visitas":      f"{'▲' if row['Δ Visitas'] >= 0 else '▼'} {abs(int(row['Δ Visitas']))} ({row['Δ% Visitas']:+.1f}%)",
-            "_importe_cur":   row["importe_cur"],
-            "_delta_importe": row["Δ Importe"],
+            "_cantidades_cur":  row["cantidades_cur"],
+            "_delta_cantidades": row["Δ Cantidades"],
         }
 
     rows   = [fmt_row(r) for _, r in merged.iterrows()]
@@ -154,7 +151,7 @@ def build_rankings(vis_df: pd.DataFrame, ven_df: pd.DataFrame, year=None, month=
         return empty
 
     df_all = pd.DataFrame(rows)
-    disp   = ["Vendedor", "Importe Actual", "Importe Ant.", "Δ Importe",
+    disp   = ["Vendedor",
               "Cant. Actual", "Cant. Ant.", "Δ Cantidades",
               "Visitas Actual", "Visitas Ant.", "Δ Visitas"]
 
@@ -165,10 +162,10 @@ def build_rankings(vis_df: pd.DataFrame, ven_df: pd.DataFrame, year=None, month=
         return out[disp].reset_index()
 
     return {
-        "mejores":    mk(df_all, "_importe_cur", False),
-        "peores":     mk(df_all[df_all["_importe_cur"] > 0], "_importe_cur", True),
-        "mejoraron":  mk(df_all[df_all["_delta_importe"] > 0], "_delta_importe", False),
-        "empeoraron": mk(df_all[df_all["_delta_importe"] < 0], "_delta_importe", True),
+        "mejores":    mk(df_all, "_cantidades_cur", False),
+        "peores":     mk(df_all[df_all["_cantidades_cur"] > 0], "_cantidades_cur", True),
+        "mejoraron":  mk(df_all[df_all["_delta_cantidades"] > 0], "_delta_cantidades", False),
+        "empeoraron": mk(df_all[df_all["_delta_cantidades"] < 0], "_delta_cantidades", True),
         "cur_label":  f"{cur_month:02d}/{cur_year}",
         "prev_label": f"{prev_month:02d}/{prev_year}" if prev_month else "—",
     }

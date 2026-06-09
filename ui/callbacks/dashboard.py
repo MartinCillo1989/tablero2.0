@@ -129,8 +129,7 @@ def register(app):
             kpi_card("No Ventas",    k["No ventas"]),
             kpi_card("Sin Motivo",   k["No ventas sin motivo"]),
             kpi_card("No Visitados", k["No visitados"]),
-            kpi_card("Importe Final", f"${k['Importe Final']:,.0f}"),
-            kpi_card("Cantidades",    f"{k['Cantidades']:,.2f}"),
+            kpi_card("Cantidades",   f"{k['Cantidades']:,.2f}"),
         ]
 
         # ── Gráfico motivos ──────────────────────────────────────

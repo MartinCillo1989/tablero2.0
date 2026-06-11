@@ -101,7 +101,10 @@ def load_visitas() -> pd.DataFrame:
     if _parquet_es_valido(PARQUET_VISITAS, "visitas"):
         print("📦 Cargando visitas desde parquet...")
         df = pd.read_parquet(PARQUET_VISITAS)
-        return _limpiar_nan_strings(df)
+        df = _limpiar_nan_strings(df)
+        if "date" in df.columns:
+            df["date"] = pd.to_datetime(df["date"], errors="coerce").dt.date
+        return df
     print("⚙️  Procesando visitas desde Excel...")
     df = _load_visitas_desde_xlsx()
     _guardar_parquet(df, PARQUET_VISITAS)

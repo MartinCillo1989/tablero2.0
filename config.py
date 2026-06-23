@@ -11,6 +11,13 @@ INACTIVOS_FILE = os.path.join(BASE_DIR, "control_clientes_inactivos.xlsx")
 MASTER_VENDEDORES_XLSX = os.path.join(MASTER_DIR, "vendedores.xlsx")
 
 # ======================================================
+# PARQUETS
+# ======================================================
+PARQUET_VISITAS = os.path.join(BASE_DIR, "cache_visitas.parquet")
+PARQUET_VENTAS  = os.path.join(BASE_DIR, "cache_ventas.parquet")
+PARQUET_ALTAS   = os.path.join(BASE_DIR, "cache_altas.parquet")
+
+# ======================================================
 # MAPEOS
 # ======================================================
 SPANISH_MONTHS = {

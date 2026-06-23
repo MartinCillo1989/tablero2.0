@@ -6,14 +6,12 @@ import pandas as pd
 
 from config import (
     DATA_DIR, MASTER_VENDEDORES_XLSX, INACTIVOS_FILE, ALTAS_DIR, BRAND_MAP, BASE_DIR,
+    PARQUET_VISITAS, PARQUET_VENTAS, PARQUET_ALTAS,
 )
 from utils.helpers import (
     list_month_folders, read_xlsx_folder, safe_replace_na,
     parse_period_spanish, normalize_vendor, monday_of, week_label,
 )
-
-PARQUET_VISITAS = os.path.join(BASE_DIR, "cache_visitas.parquet")
-PARQUET_VENTAS  = os.path.join(BASE_DIR, "cache_ventas.parquet")
 
 
 def _parquet_es_valido(parquet_path: str, data_subdir: str) -> bool:
@@ -31,6 +29,22 @@ def _parquet_es_valido(parquet_path: str, data_subdir: str) -> bool:
                 if xlsx_mtime > parquet_mtime:
                     print(f"🔄 Archivo nuevo detectado: {fn} — regenerando parquet...")
                     return False
+    return True
+
+
+def _parquet_es_valido_altas(parquet_path: str) -> bool:
+    """Devuelve True si el parquet existe y es más nuevo que todos los xlsx de altas/."""
+    if not os.path.exists(parquet_path):
+        return False
+    parquet_mtime = os.path.getmtime(parquet_path)
+    if not os.path.isdir(ALTAS_DIR):
+        return False
+    for fn in os.listdir(ALTAS_DIR):
+        if fn.lower().endswith(".xlsx") and not fn.startswith("~$"):
+            xlsx_mtime = os.path.getmtime(os.path.join(ALTAS_DIR, fn))
+            if xlsx_mtime > parquet_mtime:
+                print(f"🔄 Archivo nuevo detectado: {fn} — regenerando parquet...")
+                return False
     return True
 
 
@@ -364,7 +378,17 @@ def load_inactivos():
 # ALTAS DE CLIENTES
 # ======================================================
 def load_altas() -> pd.DataFrame:
-    """Lee todos los xlsx de la carpeta altas/."""
+    if _parquet_es_valido_altas(PARQUET_ALTAS):
+        print("📦 Cargando altas desde parquet...")
+        df = pd.read_parquet(PARQUET_ALTAS)
+        return _limpiar_nan_strings(df)
+    print("⚙️  Procesando altas desde Excel...")
+    df = _load_altas_desde_xlsx()
+    _guardar_parquet(df, PARQUET_ALTAS)
+    return df
+
+
+def _load_altas_desde_xlsx() -> pd.DataFrame:
     if not os.path.isdir(ALTAS_DIR):
         return pd.DataFrame()
     frames = []
@@ -386,6 +410,8 @@ def load_altas() -> pd.DataFrame:
         else:
             df["_vend_num"] = pd.NA
         df["_periodo"] = fn.replace(".xlsx", "").replace(".XLSX", "")
+        df["year"]  = pd.to_numeric(df["_periodo"].str.slice(0, 4), errors="coerce").astype("Int64")
+        df["month"] = pd.to_numeric(df["_periodo"].str.slice(5, 7), errors="coerce").astype("Int64")
         frames.append(df)
     if not frames:
         return pd.DataFrame()

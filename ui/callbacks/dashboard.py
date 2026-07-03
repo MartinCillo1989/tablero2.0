@@ -4,6 +4,7 @@ from io import BytesIO
 import pandas as pd
 import plotly.express as px
 from dash import Input, Output, State, dcc
+from dash.exceptions import PreventUpdate
 
 from config import FONT
 from data.cache import CACHE
@@ -42,7 +43,6 @@ def register(app):
             children=tabs,
         )
 
-
     @app.callback(
         Output("f_year", "options"),
         Output("f_year", "value"),
@@ -68,7 +68,6 @@ def register(app):
     def update_week_and_vendor(year, month):
         if year is None:
             return [], None, []
-        from datetime import datetime
         weeks_set = set()
         for df in [CACHE.vis, CACHE.ven]:
             if isinstance(df, pd.DataFrame) and not df.empty and "week_label" in df.columns:
@@ -81,7 +80,6 @@ def register(app):
                        key=lambda lbl: _week_dt(lbl))
         week_opts = [{"label": w, "value": w} for w in weeks]
 
-        # Vendedores
         vset = set()
         for df in [CACHE.vis, CACHE.ven]:
             if isinstance(df, pd.DataFrame) and not df.empty and "vendedor" in df.columns:
@@ -203,9 +201,20 @@ def register(app):
             }
             SCOLS = ["vendedor", "date", "dia", "primera_visita", "inicio_obj",
                      "ultima_visita", "hs_trab_hhmm", "ventas", "no_ventas", "sin_motivo"]
-            show  = [c for c in SCOLS if c in jornada.columns]
-            jornada_data = jornada[show].to_dict("records")
-            jornada_cols = [{"name": JHDRS.get(c, c), "id": c} for c in show]
+            show  = jornada[[c for c in SCOLS if c in jornada.columns]].copy()
+
+            # Agregar columna Nota desde GitHub
+            from utils.notas import cargar_notas
+            notas = cargar_notas()
+            show["Nota"] = show.apply(
+                lambda r: notas.get(f"{r['vendedor']}|{r['date']}", ""), axis=1
+            )
+
+            jornada_data = show.to_dict("records")
+            jornada_cols = (
+                [{"name": JHDRS.get(c, c), "id": c} for c in SCOLS if c in show.columns]
+                + [{"name": "✏️ Nota", "id": "Nota", "editable": True}]
+            )
 
         # ── Inactivos ────────────────────────────────────────────
         inactivos_data, inactivos_cols = [], []
@@ -228,6 +237,35 @@ def register(app):
                 ventas_sem_data, ventas_sem_cols, jornada_data, jornada_cols,
                 inactivos_data, inactivos_cols)
 
+    # ── Guardar nota al editar la tabla de jornada ──────────────
+    @app.callback(
+        Output("jornada_tbl", "data", allow_duplicate=True),
+        Input("jornada_tbl", "data_timestamp"),
+        State("jornada_tbl", "data"),
+        prevent_initial_call=True,
+    )
+    def guardar_nota_jornada(timestamp, data):
+        from flask import request as flask_request
+        from utils.notas import guardar_nota
+
+        auth    = flask_request.authorization
+        usuario = auth.username.lower() if auth else ""
+
+        if usuario not in app.SUPERVISORES:
+            raise PreventUpdate
+
+        if not data:
+            raise PreventUpdate
+
+        for row in data:
+            vendedor = row.get("vendedor", "")
+            fecha    = str(row.get("date", ""))
+            nota     = row.get("Nota", "")
+            if vendedor and fecha:
+                guardar_nota(vendedor, fecha, nota)
+
+        return data
+
     # ── Descarga Excel jornada ───────────────────────────────────
     @app.callback(
         Output("download_jornada_excel", "data"),
@@ -239,7 +277,6 @@ def register(app):
         prevent_initial_call=True,
     )
     def download_jornada_excel(n_clicks, year, month, week, vend):
-        # Usa la jornada del CACHE filtrada, sin recalcular
         jornada = apply_filters(CACHE.jornada_all, year, month, week, vend)
         if jornada.empty:
             jornada = pd.DataFrame(columns=["Vendedor", "Fecha", "Día", "Primera visita",
@@ -272,5 +309,4 @@ def _week_dt(label):
     try:
         return datetime.strptime(str(label).split(" - ")[0].strip(), "%d/%m/%Y")
     except Exception:
-        from datetime import datetime
         return datetime(1900, 1, 1)

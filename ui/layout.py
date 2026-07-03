@@ -37,6 +37,7 @@ INDEX_STRING = '''
     .Select-option.is-selected { background-color: #1d3566 !important; color: #60a5fa !important; }
     .VirtualizedSelectOption { background-color: #0d1117 !important; color: #e2e8f0 !important; }
     .dash-spreadsheet-container .dash-spreadsheet-inner tr:hover td { background-color: rgba(59,130,246,0.06) !important; }
+    .dash-spreadsheet td[data-dash-column="Nota"] { background-color: rgba(59,130,246,0.05) !important; cursor: text !important; }
     @media (max-width: 600px) {
       h1 { font-size: 24px !important; }
       .dash-tab { padding: 8px 10px !important; font-size: 11px !important; }
@@ -78,7 +79,6 @@ def _tab_dashboard():
                     style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
                     style_data_conditional=[
                         {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
-                        {"if": {"column_id": "Importe Final"}, "fontWeight": "700", "color": "#22c55e"},
                         {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
                     ],
                 ),
@@ -99,15 +99,26 @@ def _tab_dashboard():
             ),
             dcc.Download(id="download_jornada_excel"),
             panel([
+                html.Div("Hacé doble click en la columna ✏️ Nota para agregar una justificación.", style={
+                    "fontSize": "11px", "color": "#475569", "fontFamily": FONT,
+                    "marginBottom": "10px", "fontStyle": "italic",
+                }),
                 dash_table.DataTable(
-                    id="jornada_tbl", page_size=15, sort_action="native", sort_mode="multi",
-                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
+                    id="jornada_tbl",
+                    page_size=15,
+                    sort_action="native",
+                    sort_mode="multi",
+                    editable=True,
+                    style_table=TBL_TABLE,
+                    style_cell=TBL_CELL,
+                    style_header=TBL_HEADER,
                     style_data_conditional=[
                         {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
                         {"if": {"filter_query": "{hs_trab} < 8", "column_id": "hs_trab_hhmm"}, "backgroundColor": "rgba(239,68,68,0.12)", "color": "#fca5a5", "fontWeight": "700"},
                         {"if": {"filter_query": '{inicio_obj} = "✅"', "column_id": "inicio_obj"}, "color": "#4ade80", "fontWeight": "700", "fontSize": "16px"},
                         {"if": {"filter_query": '{inicio_obj} = "❌"', "column_id": "inicio_obj"}, "color": "#f87171", "fontWeight": "700", "fontSize": "16px"},
                         {"if": {"filter_query": '{inicio_obj} = "—"', "column_id": "inicio_obj"}, "color": "#64748b"},
+                        {"if": {"column_id": "Nota"}, "backgroundColor": "rgba(59,130,246,0.06)", "color": "#93c5fd", "fontStyle": "italic"},
                         {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
                     ],
                 ),
@@ -225,7 +236,6 @@ def build_layout():
             "color": "#e2e8f0",
         },
         children=[
-            # ── Header ──────────────────────────────────────
             html.Div(
                 style={
                     "display": "flex", "alignItems": "center", "justifyContent": "space-between",
@@ -256,8 +266,6 @@ def build_layout():
                     ]),
                 ],
             ),
-
-            # ── Filtros ─────────────────────────────────────
             html.Div(
                 style={
                     "display": "grid",
@@ -269,14 +277,12 @@ def build_layout():
                     "boxShadow": "0 4px 20px rgba(0,0,0,0.35)",
                 },
                 children=[
-                    html.Div([filter_label("Año"),   dcc.Dropdown(id="f_year",  options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
-                    html.Div([filter_label("Mes"),   dcc.Dropdown(id="f_month", options=[{"label": f"{m:02d}", "value": m} for m in range(1, 13)], value=date.today().month, clearable=True, style=DROPDOWN_STYLE)]),
-                    html.Div([filter_label("Semana"), dcc.Dropdown(id="f_week", options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
-                    html.Div([filter_label("Vendedor"), dcc.Dropdown(id="f_vend", options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
+                    html.Div([filter_label("Año"),      dcc.Dropdown(id="f_year",  options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
+                    html.Div([filter_label("Mes"),      dcc.Dropdown(id="f_month", options=[{"label": f"{m:02d}", "value": m} for m in range(1, 13)], value=date.today().month, clearable=True, style=DROPDOWN_STYLE)]),
+                    html.Div([filter_label("Semana"),   dcc.Dropdown(id="f_week",  options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
+                    html.Div([filter_label("Vendedor"), dcc.Dropdown(id="f_vend",  options=[], value=None, clearable=True, style=DROPDOWN_STYLE)]),
                 ],
             ),
-
-            # ── Tabs (se renderizan según el rol del usuario) ─
             html.Div(id="tabs_container"),
         ],
     )

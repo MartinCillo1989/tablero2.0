@@ -66,3 +66,38 @@
 [class*="-option"]:hover {
     background-color: #1e2535 !important;
 }
+
+/* ── Dropdown nativo de Dash (nueva versión) ───────────── */
+
+/* El botón que se ve cuando el dropdown está cerrado */
+button.dash-dropdown {
+    background-color: #0d1117 !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 10px !important;
+}
+
+button.dash-dropdown:hover,
+button.dash-dropdown:focus {
+    background-color: #0d1117 !important;
+    border-color: rgba(59,130,246,0.4) !important;
+}
+
+/* El span interno que muestra el texto del valor seleccionado */
+.dash-dropdown-grid-container,
+.dash-dropdown-trigger,
+button.dash-dropdown span {
+    background-color: transparent !important;
+    color: #e2e8f0 !important;
+}
+
+/* El wrapper general (por si el div externo necesita reforzarse) */
+.dash-dropdown-wrapper {
+    background-color: #0d1117 !important;
+    color: #e2e8f0 !important;
+}
+
+/* Input oculto de accesibilidad, por las dudas */
+.dash-dropdown-focus-target {
+    color: #e2e8f0 !important;
+}

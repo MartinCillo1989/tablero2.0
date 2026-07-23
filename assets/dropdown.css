@@ -1,0 +1,68 @@
+/* ── Dropdowns (Dash usa react-select) ─────────────────── */
+
+/* Contenedor del control (donde se ve el valor seleccionado) */
+.Select-control,
+.dash-dropdown .Select-control {
+    background-color: #0d1117 !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: #e2e8f0 !important;
+}
+
+/* Texto del valor ya seleccionado */
+.Select-value-label,
+.Select--single > .Select-control .Select-value {
+    color: #e2e8f0 !important;
+}
+
+/* Texto mientras escribís para filtrar */
+.Select-input > input {
+    color: #e2e8f0 !important;
+}
+
+/* Placeholder */
+.Select-placeholder {
+    color: #7ea3c4 !important;
+}
+
+/* Menú desplegable (lista de opciones) */
+.Select-menu-outer {
+    background-color: #0d1117 !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: #e2e8f0 !important;
+}
+
+.Select-option {
+    background-color: #0d1117 !important;
+    color: #e2e8f0 !important;
+}
+
+.Select-option.is-focused {
+    background-color: #1e2535 !important;
+}
+
+/* Flechita y botón de limpiar (la X) */
+.Select-arrow,
+.Select-clear {
+    color: #7ea3c4 !important;
+}
+
+/* Si tu versión de Dash/dcc usa el nuevo react-select (clases con hash tipo css-xxxxx) */
+[class*="-control"] {
+    background-color: #0d1117 !important;
+    border-color: rgba(255,255,255,0.1) !important;
+}
+[class*="-singleValue"],
+[class*="-Input"],
+[class*="-input"] input {
+    color: #e2e8f0 !important;
+}
+[class*="-menu"] {
+    background-color: #0d1117 !important;
+}
+[class*="-option"] {
+    background-color: #0d1117 !important;
+    color: #e2e8f0 !important;
+}
+[class*="-option"]:hover {
+    background-color: #1e2535 !important;
+}

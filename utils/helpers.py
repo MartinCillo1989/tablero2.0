@@ -13,11 +13,12 @@ from config import SPANISH_MONTHS, DIAS
 def monday_of(d: date) -> date:
     return d - timedelta(days=d.weekday())
 
-
-def week_label(monday: date) -> str:
+def week_label(x):
+    if pd.isna(x):
+        return ""
+    monday = x - timedelta(days=x.weekday())
     sunday = monday + timedelta(days=6)
     return f"{monday.strftime('%d/%m/%Y')} - {sunday.strftime('%d/%m/%Y')}"
-
 
 def parse_period_spanish(desc: str):
     if not isinstance(desc, str):

@@ -34,12 +34,25 @@ def compute_kpis(vis_df: pd.DataFrame, ven_df: pd.DataFrame) -> dict:
         sin_hora_visita = vis_df["Hora visita"].isna()
         no_visitados    = int((sin_hora_visita & sin_venta & sin_hora_motivo & sin_texto).sum())
 
+    # ── Cantidades: total y separadas por categoría (Cigarrillos / Varios) ──
     cant_total = float(ven_df["Cantidades Totales"].sum()) if "Cantidades Totales" in ven_df.columns else 0.0
+
+    cant_cig    = 0.0
+    cant_varios = 0.0
+    if "Cantidades Totales" in ven_df.columns and "categoria" in ven_df.columns:
+        cant_cig    = float(ven_df.loc[ven_df["categoria"] == "Cigarrillos", "Cantidades Totales"].sum())
+        cant_varios = float(ven_df.loc[ven_df["categoria"] == "Varios",      "Cantidades Totales"].sum())
+    elif "Cantidades Totales" in ven_df.columns:
+        # Si todavía no existe la columna "categoria" (parquet viejo sin regenerar),
+        # todo cae en el total general para no romper el dashboard.
+        cant_cig = cant_total
 
     return {
         "Visitas": total_visitas, "Ventas": ventas, "No ventas": no_ventas,
         "No ventas sin motivo": sin_motivo, "No visitados": no_visitados,
         "Cantidades": cant_total,
+        "Cantidades Cigarrillos": cant_cig,
+        "Cantidades Varios": cant_varios,
     }
 
 

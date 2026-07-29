@@ -68,6 +68,8 @@ def _tab_dashboard():
                                "border": "1px solid rgba(59,130,246,0.15)",
                                "borderRadius": "12px", "padding": "14px 16px",
                            })]),
+                    panel([section_title("Mix Varios — Cantidades Totales"),
+                           dcc.Graph(id="mix_varios_bar", style={"height": "360px"}, config={"displayModeBar": False})]),
                 ],
             ),
             html.Div(style={"marginTop": "20px"}),

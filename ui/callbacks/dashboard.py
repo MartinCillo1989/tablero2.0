@@ -97,6 +97,7 @@ def register(app):
         Output("kpis",           "children"),
         Output("motivos_bar",    "figure"),
         Output("mix_bar",        "figure"),
+        Output("mix_varios_bar", "figure"),
         Output("mix_obj_box",    "children"),
         Output("ventas_sem_tbl", "data"),
         Output("ventas_sem_tbl", "columns"),
@@ -146,17 +147,15 @@ def register(app):
                                           xaxis=AXIS_STYLE, yaxis={**AXIS_STYLE, "range": [0, ymax], "automargin": True},
                                           uniformtext_minsize=11, uniformtext_mode="hide", bargap=0.35)
 
-        # ── Gráfico mix ──────────────────────────────────────────
-        fig_mix = empty_fig
+        # ── Gráfico mix (Cigarrillos + Varios) ───────────────────
+        fig_mix        = empty_fig
+        fig_mix_varios = empty_fig
         mix_obj_children = render_mix_objective_box(compute_mix_progress(pd.DataFrame()))
 
-        if len(ven_f) > 0 and "articulo" in ven_f.columns:
-            art_u        = ven_f["articulo"].astype(str).str.upper()
-            CIG_IDS      = {1003, 1004, 1005, 1006, 1028}
-            marca_series = ven_f.get("marca_id", pd.Series([pd.NA] * len(ven_f)))
-            mask_cig     = pd.to_numeric(marca_series, errors="coerce").isin(CIG_IDS)
-            mask_mix     = art_u.str.contains(r"\(\s*001002\s*\)", regex=True, na=False)
-            cig = ven_f[mask_cig | mask_mix].copy()
+        if len(ven_f) > 0 and "articulo" in ven_f.columns and "categoria" in ven_f.columns:
+            cig    = ven_f[ven_f["categoria"] == "Cigarrillos"].copy()
+            varios = ven_f[ven_f["categoria"] == "Varios"].copy()
+
             if len(cig) > 0:
                 rep = (cig.groupby("articulo", as_index=False)["Cantidades Totales"]
                        .sum().sort_values("Cantidades Totales", ascending=True).tail(15))
@@ -168,6 +167,21 @@ def register(app):
                 xmax = rep["Cantidades Totales"].max() * 1.15
                 fig_mix.update_layout(**PLOTLY_LAYOUT, margin=dict(l=300, r=40, t=30, b=40),
                                       xaxis={**AXIS_STYLE, "range": [0, xmax], "title": "Cantidades Totales"},
+                                      yaxis={**AXIS_STYLE, "title": "", "automargin": True,
+                                             "tickfont": dict(size=11, family=FONT, color="#94a3b8")},
+                                      height=400, bargap=0.25)
+
+            if len(varios) > 0:
+                rep_v = (varios.groupby("articulo", as_index=False)["Cantidades Totales"]
+                         .sum().sort_values("Cantidades Totales", ascending=True).tail(15))
+                bar_colors_v = [ACCENT_SEQUENCE[i % len(ACCENT_SEQUENCE)] for i in range(len(rep_v))]
+                fig_mix_varios = px.bar(rep_v, x="Cantidades Totales", y="articulo", orientation="h", text="Cantidades Totales")
+                fig_mix_varios.update_traces(textposition="auto", cliponaxis=False, texttemplate="%{text:.2f}",
+                                      textfont=dict(size=11, color="#e2e8f0", family=FONT),
+                                      marker=dict(color=bar_colors_v, line=dict(width=0)))
+                xmax_v = rep_v["Cantidades Totales"].max() * 1.15
+                fig_mix_varios.update_layout(**PLOTLY_LAYOUT, margin=dict(l=300, r=40, t=30, b=40),
+                                      xaxis={**AXIS_STYLE, "range": [0, xmax_v], "title": "Cantidades Totales"},
                                       yaxis={**AXIS_STYLE, "title": "", "automargin": True,
                                              "tickfont": dict(size=11, family=FONT, color="#94a3b8")},
                                       height=400, bargap=0.25)
@@ -233,7 +247,7 @@ def register(app):
             inactivos_data = inactivos_f.to_dict("records")
             inactivos_cols = [{"name": c, "id": c} for c in inactivos_f.columns]
 
-        return (kpis, fig_motivos, fig_mix, mix_obj_children,
+        return (kpis, fig_motivos, fig_mix, fig_mix_varios, mix_obj_children,
                 ventas_sem_data, ventas_sem_cols, jornada_data, jornada_cols,
                 inactivos_data, inactivos_cols)
 

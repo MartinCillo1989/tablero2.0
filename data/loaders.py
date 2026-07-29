@@ -6,7 +6,7 @@ import pandas as pd
 
 from config import (
     DATA_DIR, MASTER_VENDEDORES_XLSX, INACTIVOS_FILE, ALTAS_DIR, BRAND_MAP, BASE_DIR,
-    PARQUET_VISITAS, PARQUET_VENTAS, PARQUET_ALTAS,
+    PARQUET_VISITAS, PARQUET_VENTAS, PARQUET_ALTAS, CIG_MARCA_IDS,
 )
 from utils.helpers import (
     list_month_folders, read_xlsx_folder, safe_replace_na,
@@ -272,6 +272,18 @@ def _load_ventas_desde_xlsx() -> pd.DataFrame:
     df["marca"]             = df["marca_id"].apply(lambda x: BRAND_MAP.get(int(x), f"{int(x)}") if pd.notna(x) else "OTROS")
     df["Cantidades Totales"] = pd.to_numeric(df["Cantidades Totales"], errors="coerce").fillna(0)
     df["Importes Finales"]   = pd.to_numeric(df["Importes Finales"],   errors="coerce").fillna(0)
+
+    # ------------------------------------------------------------
+    # Categoría: Cigarrillos vs Varios
+    # Un renglón es "Cigarrillos" si su marca_id está en CIG_MARCA_IDS,
+    # o si el artículo matchea el código especial (001002).
+    # Todo lo demás cae en "Varios".
+    # ------------------------------------------------------------
+    art_u_cat   = df["articulo"].astype(str).str.upper()
+    mask_mix_id = art_u_cat.str.contains(r"\(\s*001002\s*\)", regex=True, na=False)
+    mask_cig_id = df["marca_id"].isin(CIG_MARCA_IDS)
+    df["categoria"] = (mask_cig_id | mask_mix_id).map({True: "Cigarrillos", False: "Varios"})
+
     return df
 
 

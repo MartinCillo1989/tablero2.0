@@ -33,6 +33,10 @@ BRAND_MAP = {
     1028: "MIX",
 }
 
+# IDs de Marca que se consideran "Cigarrillos". Todo lo que no esté acá
+# (y no matchee el artículo especial 001002) se clasifica como "Varios".
+CIG_MARCA_IDS = {1003, 1004, 1005, 1006, 1028}
+
 DIAS = {
     0: "Lunes",
     1: "Martes",

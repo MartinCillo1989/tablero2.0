@@ -1,9 +1,12 @@
+import threading
+
 from dash import Dash
 from dash_auth import BasicAuth
 
 from data.cache import CACHE
 from ui.layout import build_layout, INDEX_STRING
 import ui.callbacks  # noqa: F401
+from utils.telegram_bot import iniciar_listener, iniciar_scheduler_diario
 
 app = Dash(__name__)
 app.title        = "Supervisión Aloma"
@@ -26,7 +29,6 @@ VENDEDOR_MAP = {
     "03-saldari":   "03-SALDARI DANIEL",
     "04-gomez":     "04-GOMEZ MARCELO",
     "05-palermo":   "05-GUSTAVO PALERMO",
-    "05-delpie":    "05-JOAQUIN DEL PIE YANES",
     "06-fraile":    "06-FRAILE BIBIANA",
     "07-munoz":     "07-MUÑOZ ESTEBAN",
     "08-dauria":    "08-DAURIA NEYEM ELIA",
@@ -36,13 +38,10 @@ VENDEDOR_MAP = {
     "12-mercado":   "12-MERCADO RAFAEL",
     "13-reynoso":   "13-REYNOSO ENZO PAT",
     "14-solia":     "14-SOLIA WALTER",
-    "15-guarino":   "15-GUARINO GABRIELA",
-    "16-sanchez":   "16-SANCHEZ DARIO",
+    "15-meli":      "15-MARCOS MELI",
     "17-rugger":    "17-RUGGER SEBASTIAN",
     "18-allende":   "18-CESAR ALLENDE",
-    "19-vallori":   "19-AGUSTIN VALLORI",
     "19-cabrera":   "19-JOEL CABRERA",
-    "20-mirabelli": "20-GONZALO MIRABELLI",
     "20-passaponti":"20-JOAQUIN PASSAPONTI",
     "21-ferreyra":  "21-FERREYRA MAURICIO EMANUEL",
 }
@@ -68,4 +67,8 @@ server = app.server
 CACHE.reload()
 
 if __name__ == "__main__":
+    # ── Telegram: listener de registro + envío automático diario ──
+    threading.Thread(target=iniciar_listener,          args=(VENDEDOR_MAP,), daemon=True).start()
+    threading.Thread(target=iniciar_scheduler_diario,  args=(VENDEDOR_MAP,), daemon=True).start()
+
     app.run(host="0.0.0.0", port=8050, debug=False)

@@ -117,6 +117,29 @@ def build_corona_ranking(ven_df: pd.DataFrame, year=None, month=None) -> pd.Data
 # ======================================================
 # PIER & ROLL RANKING
 # ======================================================
+PIER_ROLL_OBJETIVO_BLISTERS = 20.0
+PIER_ROLL_FACTOR_BLISTER    = 100
+
+
+def build_pier_roll_raw(ven_df: pd.DataFrame, year=None, month=None) -> pd.DataFrame:
+    """Igual que build_pier_roll_ranking pero SIN formatear (para cálculos,
+    ej. el mensaje de Telegram). Devuelve columnas:
+    vendedor, blisters_vendidos, objetivo_blisters."""
+    today     = date.today()
+    cur_year  = year  if year  is not None else today.year
+    cur_month = month if month is not None else today.month
+
+    cur = _pier_roll_por_vendedor(_filter_ym(ven_df, cur_year, cur_month))
+    if cur.empty:
+        return pd.DataFrame(columns=["vendedor", "blisters_vendidos", "objetivo_blisters"])
+
+    out = cur.copy()
+    out = out[out["vendedor"].str.strip() != ""]
+    out["blisters_vendidos"] = out["cantidad"] * PIER_ROLL_FACTOR_BLISTER
+    out["objetivo_blisters"] = PIER_ROLL_OBJETIVO_BLISTERS
+    return out[["vendedor", "blisters_vendidos", "objetivo_blisters"]]
+
+
 def build_pier_roll_ranking(ven_df: pd.DataFrame, year=None, month=None) -> pd.DataFrame:
     """Objetivo fijo: 20 BLISTERS de Pier & Roll por vendedor en el mes,
     sin contar unidades bonificadas al 100%.
@@ -126,8 +149,8 @@ def build_pier_roll_ranking(ven_df: pd.DataFrame, year=None, month=None) -> pd.D
     el dato crudo (20 blisters reales = 0.20 crudo), pero MOSTRAMOS todo
     multiplicado x100 para que se lea en blisters (ej: 0.01 crudo -> "1").
     """
-    OBJETIVO_RAW = 0.20   # = 20 blisters
-    FACTOR_BLISTER = 100
+    OBJETIVO_RAW   = PIER_ROLL_OBJETIVO_BLISTERS / PIER_ROLL_FACTOR_BLISTER  # 0.20
+    FACTOR_BLISTER = PIER_ROLL_FACTOR_BLISTER
 
     today     = date.today()
     cur_year  = year  if year  is not None else today.year

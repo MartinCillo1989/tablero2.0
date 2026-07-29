@@ -51,6 +51,14 @@ DIAS = {
 LIMITE_INICIO_SEG = 9 * 3600 + 30 * 60
 
 # ======================================================
+# TELEGRAM
+# ======================================================
+# El token real va en secrets_config.py (NO subir ese archivo a git)
+TELEGRAM_CHATS_FILE  = os.path.join(BASE_DIR, "telegram_chats.json")   # {usuario: chat_id}
+TELEGRAM_OFFSET_FILE = os.path.join(BASE_DIR, "telegram_offset.json")  # último update_id procesado
+HORA_ENVIO_TELEGRAM  = "09:00"  # HH:MM, formato 24hs
+
+# ======================================================
 # UI
 # ======================================================
 FONT = "'DM Sans', 'Segoe UI', sans-serif"

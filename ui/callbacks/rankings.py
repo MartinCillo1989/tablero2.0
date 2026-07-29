@@ -132,3 +132,22 @@ def register(app):
         if year:  parts.append(str(year))
         if month: parts.append(f"{int(month):02d}")
         return dcc.send_bytes(output.getvalue(), "_".join(parts) + ".xlsx")
+
+    # ── Envío manual por Telegram ────────────────────────────────
+    @app.callback(
+        Output("telegram_status_msg", "children"),
+        Input("btn_enviar_telegram", "n_clicks"),
+        State("f_year",  "value"),
+        State("f_month", "value"),
+        prevent_initial_call=True,
+    )
+    def enviar_telegram_manual(n_clicks, year, month):
+        from utils.telegram_bot import enviar_objetivos_a_todos
+        try:
+            enviados = enviar_objetivos_a_todos(app.VENDEDOR_MAP, year, month)
+        except Exception as e:
+            traceback.print_exc()
+            return f"⚠️ Error: {e}"
+        if enviados == 0:
+            return "⚠️ No hay vendedores registrados en Telegram todavía."
+        return f"✅ Enviado a {enviados} vendedor/es."

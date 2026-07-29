@@ -155,13 +155,23 @@ def _tab_rankings():
                 style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "12px"},
                 children=[
                     html.Div(id="ranking_periodo_label", style={"fontSize": "12px", "color": "#64748b", "fontFamily": FONT}),
-                    html.Button("⬇  Descargar Objetivos (Excel)", id="btn_download_objetivos", n_clicks=0, style={
-                        "height": "36px", "cursor": "pointer",
-                        "background": "linear-gradient(135deg, #14532d 0%, #166534 100%)",
-                        "color": "#86efac", "border": "1px solid rgba(34,197,94,0.35)",
-                        "borderRadius": "10px", "padding": "0 16px",
-                        "fontWeight": "600", "fontSize": "12px", "fontFamily": FONT,
-                    }),
+                    html.Div(style={"display": "flex", "gap": "10px", "alignItems": "center"}, children=[
+                        html.Div(id="telegram_status_msg", style={"fontSize": "11px", "color": "#64748b", "fontFamily": FONT}),
+                        html.Button("📨  Enviar por Telegram", id="btn_enviar_telegram", n_clicks=0, style={
+                            "height": "36px", "cursor": "pointer",
+                            "background": "linear-gradient(135deg, #1d3566 0%, #1e4080 100%)",
+                            "color": "#93c5fd", "border": "1px solid rgba(59,130,246,0.4)",
+                            "borderRadius": "10px", "padding": "0 16px",
+                            "fontWeight": "600", "fontSize": "12px", "fontFamily": FONT,
+                        }),
+                        html.Button("⬇  Descargar Objetivos (Excel)", id="btn_download_objetivos", n_clicks=0, style={
+                            "height": "36px", "cursor": "pointer",
+                            "background": "linear-gradient(135deg, #14532d 0%, #166534 100%)",
+                            "color": "#86efac", "border": "1px solid rgba(34,197,94,0.35)",
+                            "borderRadius": "10px", "padding": "0 16px",
+                            "fontWeight": "600", "fontSize": "12px", "fontFamily": FONT,
+                        }),
+                    ]),
                 ],
             ),
             dcc.Download(id="download_objetivos_excel"),

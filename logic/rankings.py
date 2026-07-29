@@ -46,6 +46,37 @@ def _mix_por_vendedor(df: pd.DataFrame) -> pd.DataFrame:
     return agg[["vendedor", "base", "corona", "obj_corona", "pct"]]
 
 
+def _pier_roll_por_vendedor(df: pd.DataFrame) -> pd.DataFrame:
+    """Suma de Cantidades Totales de Pier & Roll (Classic + Organic) por vendedor,
+    EXCLUYENDO las filas bonificadas al 100% (columna 'Bonific' == 1)."""
+    if not isinstance(df, pd.DataFrame) or df.empty or "vendedor" not in df.columns:
+        return pd.DataFrame(columns=["vendedor", "cantidad"])
+
+    tmp = df.copy()
+
+    # Excluir bonificado 100%
+    if "Bonific" in tmp.columns:
+        bonific_num = pd.to_numeric(tmp["Bonific"], errors="coerce").fillna(0)
+        tmp = tmp[bonific_num != 1]
+
+    art_u = tmp["articulo"].astype(str).str.upper() if "articulo" in tmp.columns else pd.Series([""] * len(tmp))
+    # Códigos (O09300) Pier & Roll Classic y (O09301) Pier & Roll Organic.
+    # OJO: empieza con letra "O", no con cero.
+    mask_pr = (
+        art_u.str.contains(r"\(\s*O0930[01]\s*\)", regex=True, na=False) |
+        art_u.str.contains("PIER & ROLL", na=False) |
+        art_u.str.contains("PIER&ROLL", na=False)
+    )
+    tmp = tmp[mask_pr]
+    if tmp.empty:
+        return pd.DataFrame(columns=["vendedor", "cantidad"])
+
+    tmp["Cantidades Totales"] = pd.to_numeric(tmp.get("Cantidades Totales", 0), errors="coerce").fillna(0)
+    agg = tmp.groupby("vendedor", as_index=False)["Cantidades Totales"].sum()
+    agg = agg.rename(columns={"Cantidades Totales": "cantidad"})
+    return agg
+
+
 # ======================================================
 # CORONA RANKING
 # ======================================================
@@ -79,6 +110,61 @@ def build_corona_ranking(ven_df: pd.DataFrame, year=None, month=None) -> pd.Data
             "% Cumpl. Actual":    f"{r['pct']:.1f}%",
             "% Cumpl. Ant.":      f"{r['pct_prev']:.1f}%",
             "Cumple":             "✅" if cumple else "❌",
+        })
+    return pd.DataFrame(rows)
+
+
+# ======================================================
+# PIER & ROLL RANKING
+# ======================================================
+def build_pier_roll_ranking(ven_df: pd.DataFrame, year=None, month=None) -> pd.DataFrame:
+    """Objetivo fijo: 20 BLISTERS de Pier & Roll por vendedor en el mes,
+    sin contar unidades bonificadas al 100%.
+
+    OJO con las unidades: en 'Cantidades Totales' el dato crudo viene en
+    'cajas' donde 1 blister = 0.01. Por eso comparamos el objetivo contra
+    el dato crudo (20 blisters reales = 0.20 crudo), pero MOSTRAMOS todo
+    multiplicado x100 para que se lea en blisters (ej: 0.01 crudo -> "1").
+    """
+    OBJETIVO_RAW = 0.20   # = 20 blisters
+    FACTOR_BLISTER = 100
+
+    today     = date.today()
+    cur_year  = year  if year  is not None else today.year
+    cur_month = month if month is not None else today.month
+    prev_year, prev_month = get_previous_year_month(cur_year, cur_month)
+
+    cur  = _pier_roll_por_vendedor(_filter_ym(ven_df, cur_year,  cur_month))
+    prev = _pier_roll_por_vendedor(_filter_ym(ven_df, prev_year, prev_month))
+
+    if cur.empty:
+        return pd.DataFrame()
+
+    merged = cur.merge(
+        prev.rename(columns={"cantidad": "cantidad_prev"}),
+        on="vendedor", how="left"
+    ).fillna(0)
+    merged = merged[merged["vendedor"].str.strip() != ""]
+
+    rows = []
+    for i, (_, r) in enumerate(merged.sort_values("cantidad", ascending=False).iterrows(), start=1):
+        cantidad_raw      = r["cantidad"]
+        cantidad_prev_raw = r["cantidad_prev"]
+        cumple = cantidad_raw >= OBJETIVO_RAW - 1e-9
+        pct    = (cantidad_raw / OBJETIVO_RAW * 100) if OBJETIVO_RAW > 0 else 0.0
+
+        blisters      = cantidad_raw      * FACTOR_BLISTER
+        blisters_prev = cantidad_prev_raw * FACTOR_BLISTER
+        objetivo_blisters = OBJETIVO_RAW * FACTOR_BLISTER
+
+        rows.append({
+            "Pos.":                 i,
+            "Vendedor":             r["vendedor"],
+            "Pier & Roll Vendido":  f"{blisters:,.0f}",
+            "Objetivo":             f"{objetivo_blisters:,.0f}",
+            "% Cumpl. Actual":      f"{pct:.1f}%",
+            "Mes Anterior":         f"{blisters_prev:,.0f}",
+            "Cumple":               "✅" if cumple else "❌",
         })
     return pd.DataFrame(rows)
 

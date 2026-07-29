@@ -151,7 +151,20 @@ def _tab_dashboard():
 def _tab_rankings():
     return dcc.Tab(label="🏆  Rankings", value="tab_rankings", children=[
         html.Div(style={"marginTop": "20px"}, children=[
-            html.Div(id="ranking_periodo_label", style={"fontSize": "12px", "color": "#64748b", "fontFamily": FONT, "marginBottom": "20px"}),
+            html.Div(
+                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "12px"},
+                children=[
+                    html.Div(id="ranking_periodo_label", style={"fontSize": "12px", "color": "#64748b", "fontFamily": FONT}),
+                    html.Button("⬇  Descargar Objetivos (Excel)", id="btn_download_objetivos", n_clicks=0, style={
+                        "height": "36px", "cursor": "pointer",
+                        "background": "linear-gradient(135deg, #14532d 0%, #166534 100%)",
+                        "color": "#86efac", "border": "1px solid rgba(34,197,94,0.35)",
+                        "borderRadius": "10px", "padding": "0 16px",
+                        "fontWeight": "600", "fontSize": "12px", "fontFamily": FONT,
+                    }),
+                ],
+            ),
+            dcc.Download(id="download_objetivos_excel"),
             _rank_section("🏆", "Mejores Vendedores",         "#fbbf24", "tbl_mejores"),
             _rank_section("💀", "Peores Vendedores",          "#f87171", "tbl_peores"),
             _rank_section("📈", "Mejoraron vs Mes Anterior",  "#4ade80", "tbl_mejoraron"),
@@ -188,6 +201,25 @@ def _tab_rankings():
                         {"if": {"filter_query": '{Cumple} = "❌"', "column_id": "Cumple"}, "color": "#f87171", "fontWeight": "700", "fontSize": "16px"},
                         {"if": {"column_id": "% Cumpl. Actual"}, "fontWeight": "700", "color": "#fbbf24"},
                         {"if": {"column_id": "Corona Vendido"},  "color": "#f59e0b"},
+                        {"if": {"column_id": "Vendedor"},        "textAlign": "left", "fontWeight": "600", "color": "#e2e8f0"},
+                        {"if": {"column_id": "Pos."},            "fontWeight": "700", "color": "#7ea3c4", "width": "40px"},
+                        {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},
+                    ],
+                ),
+            ], {"marginBottom": "24px"}),
+            html.Div(style={"display": "flex", "alignItems": "center", "gap": "10px", "marginBottom": "12px"},
+                     children=[html.Span("🍬", style={"fontSize": "20px"}),
+                               section_title("Objetivo Pier & Roll — Cumplimiento por Vendedor (20 u./mes, sin bonificado 100%)", style={"color": "#a78bfa", "marginBottom": "0", "fontSize": "14px"})]),
+            panel([
+                dash_table.DataTable(
+                    id="tbl_pier_roll", page_size=30, sort_action="native", sort_mode="multi",
+                    style_table=TBL_TABLE, style_cell=TBL_CELL, style_header=TBL_HEADER,
+                    style_data_conditional=[
+                        {"if": {"row_index": "odd"}, "backgroundColor": "rgba(255,255,255,0.02)"},
+                        {"if": {"filter_query": '{Cumple} = "✅"', "column_id": "Cumple"}, "color": "#4ade80", "fontWeight": "700", "fontSize": "16px"},
+                        {"if": {"filter_query": '{Cumple} = "❌"', "column_id": "Cumple"}, "color": "#f87171", "fontWeight": "700", "fontSize": "16px"},
+                        {"if": {"column_id": "% Cumpl. Actual"}, "fontWeight": "700", "color": "#fbbf24"},
+                        {"if": {"column_id": "Pier & Roll Vendido"}, "color": "#a78bfa"},
                         {"if": {"column_id": "Vendedor"},        "textAlign": "left", "fontWeight": "600", "color": "#e2e8f0"},
                         {"if": {"column_id": "Pos."},            "fontWeight": "700", "color": "#7ea3c4", "width": "40px"},
                         {"if": {"state": "selected"}, "backgroundColor": "rgba(59,130,246,0.15)", "border": "1px solid rgba(59,130,246,0.4)"},

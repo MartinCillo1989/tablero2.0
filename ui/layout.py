@@ -152,7 +152,7 @@ def _tab_rankings():
     return dcc.Tab(label="🏆  Rankings", value="tab_rankings", children=[
         html.Div(style={"marginTop": "20px"}, children=[
             html.Div(
-                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "12px"},
+                style={"display": "flex", "justifyContent": "space-between", "alignItems": "center", "marginBottom": "4px"},
                 children=[
                     html.Div(id="ranking_periodo_label", style={"fontSize": "12px", "color": "#64748b", "fontFamily": FONT}),
                     html.Div(style={"display": "flex", "gap": "10px", "alignItems": "center"}, children=[
@@ -164,6 +164,13 @@ def _tab_rankings():
                             "borderRadius": "10px", "padding": "0 16px",
                             "fontWeight": "600", "fontSize": "12px", "fontFamily": FONT,
                         }),
+                        html.Button("📋  Resumen a Supervisores", id="btn_enviar_supervisores", n_clicks=0, style={
+                            "height": "36px", "cursor": "pointer",
+                            "background": "linear-gradient(135deg, #5b21b6 0%, #6d28d9 100%)",
+                            "color": "#ddd6fe", "border": "1px solid rgba(139,92,246,0.4)",
+                            "borderRadius": "10px", "padding": "0 16px",
+                            "fontWeight": "600", "fontSize": "12px", "fontFamily": FONT,
+                        }),
                         html.Button("⬇  Descargar Objetivos (Excel)", id="btn_download_objetivos", n_clicks=0, style={
                             "height": "36px", "cursor": "pointer",
                             "background": "linear-gradient(135deg, #14532d 0%, #166534 100%)",
@@ -172,6 +179,36 @@ def _tab_rankings():
                             "fontWeight": "600", "fontSize": "12px", "fontFamily": FONT,
                         }),
                     ]),
+                ],
+            ),
+            html.Div(
+                "💡 Si elegís un vendedor en el filtro de arriba, el envío por Telegram va solo a esa persona. Si lo dejás vacío, va a todos.",
+                style={"fontSize": "11px", "color": "#475569", "fontFamily": FONT, "fontStyle": "italic", "marginBottom": "12px"},
+            ),
+            html.Div(
+                style={
+                    "display": "flex", "alignItems": "center", "gap": "10px",
+                    "marginBottom": "20px", "backgroundColor": "#161b27",
+                    "border": "1px solid rgba(255,255,255,0.07)", "borderRadius": "12px",
+                    "padding": "10px 14px",
+                },
+                children=[
+                    html.Div("🔓 Resetear registro Telegram:", style={"fontSize": "12px", "color": "#94a3b8", "fontFamily": FONT, "whiteSpace": "nowrap"}),
+                    dcc.Dropdown(
+                        id="f_reset_telegram_usuario",
+                        options=[], value=None, clearable=True,
+                        placeholder="Elegí a quién resetear...",
+                        style={**DROPDOWN_STYLE, "minWidth": "260px", "flex": "1"},
+                    ),
+                    html.Button("Resetear", id="btn_reset_telegram", n_clicks=0, style={
+                        "height": "36px", "cursor": "pointer",
+                        "background": "linear-gradient(135deg, #7c2d12 0%, #9a3412 100%)",
+                        "color": "#fed7aa", "border": "1px solid rgba(249,115,22,0.4)",
+                        "borderRadius": "10px", "padding": "0 16px",
+                        "fontWeight": "600", "fontSize": "12px", "fontFamily": FONT,
+                        "whiteSpace": "nowrap",
+                    }),
+                    html.Div(id="reset_telegram_status_msg", style={"fontSize": "11px", "color": "#64748b", "fontFamily": FONT}),
                 ],
             ),
             dcc.Download(id="download_objetivos_excel"),

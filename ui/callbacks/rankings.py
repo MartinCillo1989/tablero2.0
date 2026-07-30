@@ -3,6 +3,7 @@ from io import BytesIO
 
 import pandas as pd
 from dash import Input, Output, State, dcc
+from flask import request as flask_request
 
 from data.cache import CACHE
 from logic.rankings import build_rankings, build_corona_ranking, build_pier_roll_ranking
@@ -10,6 +11,11 @@ from logic.resumen import build_inactivos_comparativo
 
 
 def register(app):
+
+    def _es_admin_telegram() -> bool:
+        auth    = flask_request.authorization
+        usuario = auth.username.lower() if auth else ""
+        return usuario == getattr(app, "ADMIN_TELEGRAM_USUARIO", None)
 
     @app.callback(
         Output("tbl_mejores",        "data"),    Output("tbl_mejores",        "columns"),
@@ -139,15 +145,86 @@ def register(app):
         Input("btn_enviar_telegram", "n_clicks"),
         State("f_year",  "value"),
         State("f_month", "value"),
+        State("f_vend",  "value"),
         prevent_initial_call=True,
     )
-    def enviar_telegram_manual(n_clicks, year, month):
-        from utils.telegram_bot import enviar_objetivos_a_todos
+    def enviar_telegram_manual(n_clicks, year, month, vend):
+        if not _es_admin_telegram():
+            return "⚠️ No tenés permiso para usar esta función."
+        from utils.telegram_bot import enviar_objetivos_a_todos, enviar_objetivos_a_uno
         try:
-            enviados = enviar_objetivos_a_todos(app.VENDEDOR_MAP, year, month)
+            if vend:
+                # Hay un vendedor seleccionado en el filtro de arriba → mandar solo a él/ella
+                resultado = enviar_objetivos_a_uno(app.VENDEDOR_MAP, vend, year, month)
+                if resultado == "ok":
+                    return f"✅ Enviado a {vend}."
+                if resultado == "no_registrado":
+                    return f"⚠️ {vend} todavía no se registró en Telegram."
+                if resultado == "no_encontrado":
+                    return f"⚠️ No encontré a {vend} en VENDEDOR_MAP."
+                return "⚠️ El bot de Telegram no está configurado (falta el token)."
+            else:
+                enviados = enviar_objetivos_a_todos(app.VENDEDOR_MAP, year, month)
+                if enviados == 0:
+                    return "⚠️ No hay vendedores registrados en Telegram todavía."
+                return f"✅ Enviado a {enviados} vendedor/es."
+        except Exception as e:
+            traceback.print_exc()
+            return f"⚠️ Error: {e}"
+
+    # ── Envío manual de resumen a supervisores ───────────────────
+    @app.callback(
+        Output("telegram_status_msg", "children", allow_duplicate=True),
+        Input("btn_enviar_supervisores", "n_clicks"),
+        State("f_year",  "value"),
+        State("f_month", "value"),
+        prevent_initial_call=True,
+    )
+    def enviar_supervisores_manual(n_clicks, year, month):
+        if not _es_admin_telegram():
+            return "⚠️ No tenés permiso para usar esta función."
+        from utils.telegram_bot import enviar_resumen_supervisores
+        try:
+            enviados = enviar_resumen_supervisores(app.VENDEDOR_MAP, app.SUPERVISOR_VENDEDORES, year, month)
         except Exception as e:
             traceback.print_exc()
             return f"⚠️ Error: {e}"
         if enviados == 0:
-            return "⚠️ No hay vendedores registrados en Telegram todavía."
-        return f"✅ Enviado a {enviados} vendedor/es."
+            return "⚠️ Ningún supervisor está registrado en Telegram todavía."
+        return f"✅ Resumen enviado a {enviados} supervisor/es."
+
+    # ── Poblar dropdown de reseteo (vendedores + supervisores) ───
+    @app.callback(
+        Output("f_reset_telegram_usuario", "options"),
+        Input("btn_reload", "n_clicks"),
+    )
+    def poblar_opciones_reset(n_clicks):
+        opciones = [
+            {"label": f"{nombre}  ({usuario})", "value": usuario}
+            for usuario, nombre in app.VENDEDOR_MAP.items()
+        ]
+        for supervisor_usuario in getattr(app, "SUPERVISOR_VENDEDORES", {}).keys():
+            opciones.append({"label": f"{supervisor_usuario.capitalize()} (supervisor)", "value": supervisor_usuario})
+        return opciones
+
+    # ── Ejecutar reseteo ──────────────────────────────────────────
+    @app.callback(
+        Output("reset_telegram_status_msg", "children"),
+        Input("btn_reset_telegram", "n_clicks"),
+        State("f_reset_telegram_usuario", "value"),
+        prevent_initial_call=True,
+    )
+    def ejecutar_reset_telegram(n_clicks, usuario):
+        if not _es_admin_telegram():
+            return "⚠️ No tenés permiso para usar esta función."
+        from utils.telegram_bot import resetear_registro
+        if not usuario:
+            return "⚠️ Elegí primero a quién resetear."
+        try:
+            existia = resetear_registro(usuario)
+        except Exception as e:
+            traceback.print_exc()
+            return f"⚠️ Error: {e}"
+        if existia:
+            return f"✅ Registro de {usuario} reseteado. Ya puede volver a registrarse."
+        return f"ℹ️ {usuario} no estaba registrado en Telegram."

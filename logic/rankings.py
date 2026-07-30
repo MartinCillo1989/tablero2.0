@@ -40,8 +40,10 @@ def _mix_por_vendedor(df: pd.DataFrame) -> pd.DataFrame:
     )
     agg["base"]       = agg["pier"] + agg["livr"]
     agg["obj_corona"] = agg["base"] * 0.20
+    # % real que Corona representa sobre la base (0-20% siendo 20% el objetivo),
+    # NO el % de cumplimiento del objetivo (que sería 0-100%).
     agg["pct"]        = agg.apply(
-        lambda r: (r["corona"] / r["obj_corona"] * 100) if r["obj_corona"] > 0 else 0.0, axis=1
+        lambda r: (r["corona"] / r["base"] * 100) if r["base"] > 0 else 0.0, axis=1
     )
     return agg[["vendedor", "base", "corona", "obj_corona", "pct"]]
 
@@ -80,6 +82,20 @@ def _pier_roll_por_vendedor(df: pd.DataFrame) -> pd.DataFrame:
 # ======================================================
 # CORONA RANKING
 # ======================================================
+def build_corona_raw(ven_df: pd.DataFrame, year=None, month=None) -> pd.DataFrame:
+    """Igual que build_corona_ranking pero SIN formatear (para cálculos,
+    ej. el mensaje de Telegram). Devuelve columnas:
+    vendedor, base, corona, obj_corona, pct."""
+    today     = date.today()
+    cur_year  = year  if year  is not None else today.year
+    cur_month = month if month is not None else today.month
+
+    cur_mix = _mix_por_vendedor(_filter_ym(ven_df, cur_year, cur_month))
+    if cur_mix.empty:
+        return pd.DataFrame(columns=["vendedor", "base", "corona", "obj_corona", "pct"])
+    return cur_mix[cur_mix["vendedor"].str.strip() != ""]
+
+
 def build_corona_ranking(ven_df: pd.DataFrame, year=None, month=None) -> pd.DataFrame:
     today     = date.today()
     cur_year  = year  if year  is not None else today.year

@@ -56,7 +56,9 @@ def compute_mix_progress(ven_f: pd.DataFrame) -> dict:
         return {**vals, "obj_corona": 0.0, "pct_corona": 0.0, "pct_promedio": 0.0}
 
     obj_corona  = base * 0.20
-    pct_corona  = (corona / obj_corona * 100) if obj_corona > 0 else 0.0
+    # % real que Corona representa sobre la base (0-20% siendo 20% el objetivo),
+    # NO el % de cumplimiento del objetivo (que sería 0-100%).
+    pct_corona  = (corona / base * 100) if base > 0 else 0.0
     return {**vals, "obj_corona": obj_corona, "pct_corona": pct_corona, "pct_promedio": pct_corona}
 
 

@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 import pandas as pd
 
+from config import COBERTURA_OBJETIVO_PCT
 from utils.helpers import get_previous_year_month, apply_filters
 
 
@@ -77,6 +78,39 @@ def _pier_roll_por_vendedor(df: pd.DataFrame) -> pd.DataFrame:
     agg = tmp.groupby("vendedor", as_index=False)["Cantidades Totales"].sum()
     agg = agg.rename(columns={"Cantidades Totales": "cantidad"})
     return agg
+
+
+PLACEHOLDERS_MOTIVO = {"", "NAN", "NONE", "<NA>", "SIN MOTIVO", "S/M", "SM",
+                        "N/A", "NA", "-", "--", "0", "NULL"}
+
+
+def _cobertura_por_vendedor(vis_df: pd.DataFrame) -> pd.DataFrame:
+    """Cobertura = % de clientes planificados efectivamente visitados.
+    Usa la MISMA definición de 'no visitado' que build_resumen_vendedores en
+    logic/resumen.py: sin Hora visita, sin Hora venta, sin Hora motivo y sin
+    texto real en Motivo (no depende de la columna 'Visitado' cruda)."""
+    if not isinstance(vis_df, pd.DataFrame) or vis_df.empty or "vendedor" not in vis_df.columns:
+        return pd.DataFrame(columns=["vendedor", "total", "no_visitados", "visitados", "pct"])
+
+    tmp = vis_df[vis_df["vendedor"].notna() & (vis_df["vendedor"] != "")].copy()
+
+    mot       = tmp["Motivo"] if "Motivo" in tmp.columns else pd.Series(pd.NA, index=tmp.index)
+    mot_str   = mot.astype(str).str.replace("\u00a0", " ", regex=False).str.strip().str.upper()
+    sin_texto = mot.isna() | mot_str.isin(PLACEHOLDERS_MOTIVO)
+
+    hv_na   = tmp["Hora visita"].isna() if "Hora visita" in tmp.columns else pd.Series(True, index=tmp.index)
+    hven_na = tmp["Hora venta"].isna()  if "Hora venta"  in tmp.columns else pd.Series(True, index=tmp.index)
+    hmot_na = tmp["Hora motivo"].isna() if "Hora motivo" in tmp.columns else pd.Series(True, index=tmp.index)
+
+    tmp["_no_visit"] = hv_na & hven_na & hmot_na & sin_texto
+
+    agg = tmp.groupby("vendedor", as_index=False).agg(
+        total       =("vendedor",  "count"),
+        no_visitados=("_no_visit", "sum"),
+    )
+    agg["visitados"] = agg["total"] - agg["no_visitados"]
+    agg["pct"] = agg.apply(lambda r: (r["visitados"] / r["total"] * 100) if r["total"] > 0 else 0.0, axis=1)
+    return agg[["vendedor", "total", "no_visitados", "visitados", "pct"]]
 
 
 # ======================================================
@@ -203,6 +237,62 @@ def build_pier_roll_ranking(ven_df: pd.DataFrame, year=None, month=None) -> pd.D
             "Objetivo":             f"{objetivo_blisters:,.0f}",
             "% Cumpl. Actual":      f"{pct:.1f}%",
             "Mes Anterior":         f"{blisters_prev:,.0f}",
+            "Cumple":               "✅" if cumple else "❌",
+        })
+    return pd.DataFrame(rows)
+
+
+# ======================================================
+# COBERTURA RANKING
+# ======================================================
+def build_cobertura_raw(vis_df: pd.DataFrame, year=None, month=None) -> pd.DataFrame:
+    """Igual que build_cobertura_ranking pero SIN formatear (para cálculos,
+    ej. el mensaje de Telegram). Devuelve columnas:
+    vendedor, total, visitados, pct, objetivo_pct."""
+    today     = date.today()
+    cur_year  = year  if year  is not None else today.year
+    cur_month = month if month is not None else today.month
+
+    cur = _cobertura_por_vendedor(_filter_ym(vis_df, cur_year, cur_month))
+    if cur.empty:
+        return pd.DataFrame(columns=["vendedor", "total", "visitados", "pct", "objetivo_pct"])
+
+    out = cur[cur["vendedor"].str.strip() != ""].copy()
+    out["objetivo_pct"] = COBERTURA_OBJETIVO_PCT
+    return out[["vendedor", "total", "visitados", "pct", "objetivo_pct"]]
+
+
+def build_cobertura_ranking(vis_df: pd.DataFrame, year=None, month=None) -> pd.DataFrame:
+    """Objetivo: % mínimo de cobertura definido en config.COBERTURA_OBJETIVO_PCT.
+    Cobertura = clientes efectivamente visitados / clientes planificados."""
+    today     = date.today()
+    cur_year  = year  if year  is not None else today.year
+    cur_month = month if month is not None else today.month
+    prev_year, prev_month = get_previous_year_month(cur_year, cur_month)
+
+    cur  = _cobertura_por_vendedor(_filter_ym(vis_df, cur_year,  cur_month))
+    prev = _cobertura_por_vendedor(_filter_ym(vis_df, prev_year, prev_month))
+
+    if cur.empty:
+        return pd.DataFrame()
+
+    merged = cur.merge(
+        prev[["vendedor", "pct"]].rename(columns={"pct": "pct_prev"}),
+        on="vendedor", how="left"
+    ).fillna(0)
+    merged = merged[merged["vendedor"].str.strip() != ""]
+
+    rows = []
+    for i, (_, r) in enumerate(merged.sort_values("pct", ascending=False).iterrows(), start=1):
+        cumple = r["pct"] >= COBERTURA_OBJETIVO_PCT - 1e-9
+        rows.append({
+            "Pos.":                 i,
+            "Vendedor":             r["vendedor"],
+            "Visitados":            int(r["visitados"]),
+            "Planificados":         int(r["total"]),
+            "% Cobertura Actual":   f"{r['pct']:.1f}%",
+            "Objetivo":             f"{COBERTURA_OBJETIVO_PCT:.0f}%",
+            "% Mes Anterior":       f"{r['pct_prev']:.1f}%",
             "Cumple":               "✅" if cumple else "❌",
         })
     return pd.DataFrame(rows)

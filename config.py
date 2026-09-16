@@ -9,6 +9,11 @@ MASTER_DIR = os.path.join(BASE_DIR, "master")            # vendedores.xlsx
 ALTAS_DIR  = os.path.join(BASE_DIR, "altas")             # archivos de altas de clientes
 INACTIVOS_FILE = os.path.join(BASE_DIR, "control_clientes_inactivos.xlsx")
 MASTER_VENDEDORES_XLSX = os.path.join(MASTER_DIR, "vendedores.xlsx")
+VIATICOS_FILE = os.path.join(BASE_DIR, "viaticos_vendedores.json")
+MONTOS_DIARIOS_VENDEDORES_FILE = os.path.join(BASE_DIR, "montos_diarios_vendedores.json")
+AUSENCIAS_VENDEDORES_FILE = os.path.join(BASE_DIR, "ausencias_vendedores.json")
+RUTAS_VENDEDORES_FILE = os.path.join(BASE_DIR, "data", "data_files", "rutas_vendedores.json")
+PRECIO_NAFTA_FILE      = os.path.join(BASE_DIR, "data", "data_files", "precio_nafta.json")
 
 # ======================================================
 # PARQUETS
@@ -49,6 +54,25 @@ DIAS = {
 
 # Límite de inicio de jornada: 9:30 en segundos
 LIMITE_INICIO_SEG = 9 * 3600 + 30 * 60
+
+# ======================================================
+# COBERTURA
+# ======================================================
+# % mínimo de clientes planificados que deben quedar efectivamente visitados
+# en el período. "No visitado" se define igual que en logic/resumen.py:
+# sin Hora visita, sin Hora venta, sin Hora motivo y sin texto real en Motivo.
+COBERTURA_OBJETIVO_PCT = 100.0  # 100% de clientes planificados visitados
+
+# ======================================================
+# PLANIFICACIÓN SEMANAL (notas del supervisor por vendedor/día)
+# ======================================================
+PLANIFICACION_FILE = os.path.join(BASE_DIR, "planificacion_semanal.json")
+
+# ======================================================
+# SHELFY (objetivos externos — shelfycenter.com)
+# ======================================================
+SHELFY_BASE_URL = "https://api.shelfycenter.com"
+SHELFY_ID_DISTRIBUIDOR = 4  # "Aloma - Rosario"
 
 # ======================================================
 # TELEGRAM

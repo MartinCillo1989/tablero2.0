@@ -13,18 +13,27 @@ app.title        = "Supervisión Aloma"
 app.index_string = INDEX_STRING
 app.layout       = build_layout()
 
-from ui.callbacks import dashboard, rankings, resumen
+from ui.callbacks import dashboard, rankings, resumen, planificacion, mapa, gastos, combustible
 dashboard.register(app)
 rankings.register(app)
 resumen.register(app)
+planificacion.register(app)
+mapa.register(app)
+gastos.register(app)
+combustible.register(app)
 
 # ── Usuarios ────────────────────────────────────────────
 # Supervisores — ven todo
-SUPERVISORES = {"hugo", "ariel", "matias", "martin"}
+# ✅ Agregado "administracion" (10/09/2026) — cuenta de solo lectura para
+# alguien de administración: ve todo el tablero igual que los demás
+# supervisores, pero SIN acceso a los botones de envío/reseteo de
+# Telegram (eso sigue limitado solo a app.ADMIN_TELEGRAM_USUARIO, que
+# sigue siendo "martin" — agregar un usuario acá no le da ese permiso).
+SUPERVISORES = {"hugo", "ariel", "matias", "martin", "administracion"}
 
 # Vendedores — usuario: nombre corto, contraseña: número, valor: nombre completo en datos
 VENDEDOR_MAP = {
-    "01-coria":     "01-CORIA BLAS GUILLE",
+    "01-jovino":     "01-JOVINO PERALTA",
     "02-lampert":   "02-LAMPERT MATIAS",
     "03-saldari":   "03-SALDARI DANIEL",
     "04-nicolas":   "04-NICOLAS MANUEL SEGURA",
@@ -43,26 +52,26 @@ VENDEDOR_MAP = {
     "17-rugger":    "17-RUGGER SEBASTIAN",
     "18-allende":   "18-CESAR ALLENDE",
     "19-cabrera":   "19-JOEL CABRERA",
-    "20-passaponti":"20-JOAQUIN PASSAPONTI",
     "21-ferreyra":  "21-FERREYRA MAURICIO EMANUEL",
+    "22-cermelli":  "22-MIGUEL CERMELLI",
 }
 
 # ── Qué vendedores le corresponden a cada supervisor (para Telegram) ──
 SUPERVISOR_VENDEDORES = {
     "hugo": [
         "02-lampert", "03-saldari", "04-nicolas", "05-palermo", "06-fraile",
-        "11-solano", "14-solia", "15-meli", "17-rugger", "18-allende", "19-cabrera",
+        "11-solano", "14-solia", "15-meli", "17-rugger", "18-allende", "19-cabrera","22-cermelli",
     ],
     "ariel": [
-        "01-coria", "07-munoz", "08-dauria", "09-rumin", "10-marche",
-        "12-mercado", "13-reynoso", "16-tamagnini", "20-passaponti", "21-ferreyra",
+        "01-jovino", "07-munoz", "08-dauria", "09-rumin", "10-marche",
+        "12-mercado", "13-reynoso", "16-tamagnini", "21-ferreyra",
     ],
     # Usuario de prueba — recibe el resumen de TODOS los vendedores (ambos equipos)
     "martin": [
         "02-lampert", "03-saldari", "04-nicolas", "05-palermo", "06-fraile",
         "11-solano", "14-solia", "15-meli", "17-rugger", "18-allende", "19-cabrera",
-        "01-coria", "07-munoz", "08-dauria", "09-rumin", "10-marche",
-        "12-mercado", "13-reynoso", "16-tamagnini", "20-passaponti", "21-ferreyra",
+        "01-jovino", "07-munoz", "08-dauria", "09-rumin", "10-marche",
+        "12-mercado", "13-reynoso", "16-tamagnini", "21-ferreyra","22-cermelli",
     ],
 }
 
@@ -72,6 +81,7 @@ USERS = {
     "ariel":  "ariel",
     "matias": "matias",
     "martin": "martin",
+    "administracion": "administracion",
     **{usuario: usuario.split("-")[0] for usuario in VENDEDOR_MAP}
 }
 

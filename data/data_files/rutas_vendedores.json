@@ -1,0 +1,382 @@
+{
+  "01-JOVINO PERALTA": {
+    "2026-08": {
+      "Lunes": 73.0,
+      "Martes": 50.0,
+      "Miercoles": 35.0,
+      "Jueves": 107.0,
+      "Viernes": 122.0,
+      "Sabado": 92.0
+    },
+    "2026-09": {
+      "Lunes": 73.0,
+      "Martes": 50.0,
+      "Miercoles": 35.0,
+      "Jueves": 107.0,
+      "Viernes": 122.0,
+      "Sabado": 92.0
+    }
+  },
+  "02-LAMPERT MATIAS": {
+    "2026-08": {
+      "Lunes": 58.0,
+      "Martes": 0.0,
+      "Miercoles": 120.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 58.0,
+      "Martes": 0.0,
+      "Miercoles": 120.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "03-SALDARI DANIEL": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "04-NICOLAS MANUEL SEGURA": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "05-GUSTAVO PALERMO": {
+    "2026-08": {
+      "Lunes": 94.0,
+      "Martes": 58.0,
+      "Miercoles": 94.0,
+      "Jueves": 40.0,
+      "Viernes": 94.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 94.0,
+      "Martes": 58.0,
+      "Miercoles": 94.0,
+      "Jueves": 40.0,
+      "Viernes": 94.0,
+      "Sabado": 0.0
+    }
+  },
+  "06-FRAILE BIBIANA": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "07-MUÑOZ ESTEBAN": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "08-DAURIA NEYEM ELIA": {
+    "2026-08": {
+      "Lunes": 20.0,
+      "Martes": 26.0,
+      "Miercoles": 34.0,
+      "Jueves": 50.0,
+      "Viernes": 20.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 20.0,
+      "Martes": 26.0,
+      "Miercoles": 34.0,
+      "Jueves": 50.0,
+      "Viernes": 20.0,
+      "Sabado": 0.0
+    }
+  },
+  "09-RUMIN GERMAN": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "10-MARCHE FERNANDO": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 86.0,
+      "Miercoles": 50.0,
+      "Jueves": 86.0,
+      "Viernes": 86.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 86.0,
+      "Miercoles": 50.0,
+      "Jueves": 86.0,
+      "Viernes": 86.0,
+      "Sabado": 0.0
+    }
+  },
+  "11-SOLANO MARINA": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "12-MERCADO RAFAEL": {
+    "2026-08": {
+      "Lunes": 66.0,
+      "Martes": 90.0,
+      "Miercoles": 0.0,
+      "Jueves": 54.0,
+      "Viernes": 172.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 66.0,
+      "Martes": 90.0,
+      "Miercoles": 0.0,
+      "Jueves": 54.0,
+      "Viernes": 172.0,
+      "Sabado": 0.0
+    }
+  },
+  "13-REYNOSO ENZO PAT": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "14-SOLIA WALTER": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 56.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 56.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "15-MARCOS EZEQUIEL MELI": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "16-TAMAGNINI MARCOS": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 72.0,
+      "Miercoles": 76.0,
+      "Jueves": 108.0,
+      "Viernes": 60.0,
+      "Sabado": 114.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 72.0,
+      "Miercoles": 76.0,
+      "Jueves": 108.0,
+      "Viernes": 60.0,
+      "Sabado": 114.0
+    }
+  },
+  "17-RUGGER SEBASTIAN": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 10.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 10.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "18-CESAR ALLENDE": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "19-JOEL CABRERA": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "20-JOAQUIN PASSAPONTI": {
+    "2026-08": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  },
+  "21-FERREYRA MAURICIO EMANUEL": {
+    "2026-08": {
+      "Lunes": 26.0,
+      "Martes": 95.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 26.0,
+      "Sabado": 0.0
+    },
+    "2026-09": {
+      "Lunes": 26.0,
+      "Martes": 95.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 26.0,
+      "Sabado": 0.0
+    }
+  },
+  "22-MIGUEL CERMELLI": {
+    "2026-09": {
+      "Lunes": 0.0,
+      "Martes": 0.0,
+      "Miercoles": 0.0,
+      "Jueves": 0.0,
+      "Viernes": 0.0,
+      "Sabado": 0.0
+    }
+  }
+}

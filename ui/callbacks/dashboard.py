@@ -25,13 +25,16 @@ def register(app):
     )
     def build_tabs(n):
         from flask import request as flask_request
-        from ui.layout import _tab_dashboard, _tab_rankings, _tab_resumen
+        from ui.layout import _tab_dashboard, _tab_rankings, _tab_resumen, _tab_planificacion, _tab_mapa, _tab_gastos
         auth = flask_request.authorization
         usuario = auth.username.lower() if auth else ""
         es_super = usuario in app.SUPERVISORES
+        es_admin = usuario == getattr(app, "ADMIN_TELEGRAM_USUARIO", None)
 
         if es_super:
-            tabs = [_tab_dashboard(), _tab_rankings(), _tab_resumen()]
+            tabs = [_tab_dashboard(), _tab_rankings(), _tab_mapa(), _tab_planificacion(), _tab_resumen()]
+            if es_admin:
+                tabs.append(_tab_gastos())
             default = "tab_dashboard"
         else:
             tabs = [_tab_resumen()]
@@ -56,6 +59,34 @@ def register(app):
         val  = CACHE.years[-1] if CACHE.years else None
         ts   = CACHE.loaded_at.strftime("%H:%M:%S") if CACHE.loaded_at else ""
         return opts, val, f"Cargado a las {ts}" if ts else ""
+
+    @app.callback(
+        Output("f_motivos_filtro", "options"),
+        Input("btn_reload", "n_clicks"),
+    )
+    def init_motivos_options(n):
+        if not isinstance(CACHE.vis, pd.DataFrame) or CACHE.vis.empty or "Motivo" not in CACHE.vis.columns:
+            return []
+        motivos = (
+            CACHE.vis["Motivo"].astype(str).str.strip()
+            .replace({"": "SIN MOTIVO", "nan": "SIN MOTIVO", "None": "SIN MOTIVO"})
+        )
+        # Forzamos cada valor a str explícitamente antes de ordenar, por si
+        # se cuela algún tipo raro (float/NaN) que .astype(str) no atrapó.
+        valores = sorted({str(m).strip() for m in motivos.unique() if pd.notna(m) and str(m).strip()})
+        return [{"label": m, "value": m} for m in valores]
+
+    # ── Artículos (para el filtro de "Ventas por Vendedor de un Artículo") ──
+    @app.callback(
+        Output("f_articulo_ventas", "options"),
+        Input("btn_reload", "n_clicks"),
+    )
+    def init_articulo_options(n):
+        if not isinstance(CACHE.ven, pd.DataFrame) or CACHE.ven.empty or "articulo" not in CACHE.ven.columns:
+            return []
+        articulos = CACHE.ven["articulo"].astype(str).str.strip()
+        valores = sorted({a for a in articulos.unique() if a and a.lower() != "nan"})
+        return [{"label": a, "value": a} for a in valores]
 
     # ── Semanas + Vendedores ─────────────────────────────────────
     @app.callback(
@@ -92,10 +123,54 @@ def register(app):
 
         return week_opts, None, vend_opts
 
+    # ── Ventas por Vendedor de un Artículo puntual ────────────────
+    @app.callback(
+        Output("ventas_articulo_tbl", "data"),
+        Output("ventas_articulo_tbl", "columns"),
+        Input("btn_reload",        "n_clicks"),
+        Input("f_year",            "value"),
+        Input("f_month",           "value"),
+        Input("f_week",            "value"),
+        Input("f_articulo_ventas", "value"),
+    )
+    def refresh_ventas_articulo(n, year, month, week, articulo):
+        columnas = [
+            {"name": "Vendedor",           "id": "Vendedor"},
+            {"name": "Cantidades Totales", "id": "Cantidades Totales"},
+        ]
+        if not articulo:
+            return [], columnas
+        if not isinstance(CACHE.ven, pd.DataFrame) or CACHE.ven.empty:
+            return [], columnas
+        if "articulo" not in CACHE.ven.columns or "vendedor" not in CACHE.ven.columns:
+            return [], columnas
+
+        # Filtramos por Año/Mes/Semana (sin vendedor — acá queremos ver
+        # TODOS los vendedores desglosados, no uno solo).
+        ven_f = apply_filters(CACHE.ven, year, month, week, None)
+        if not isinstance(ven_f, pd.DataFrame) or ven_f.empty:
+            return [], columnas
+
+        ven_art = ven_f[ven_f["articulo"].astype(str).str.strip() == str(articulo).strip()].copy()
+        if ven_art.empty:
+            return [], columnas
+
+        ven_art["Cantidades Totales"] = pd.to_numeric(ven_art.get("Cantidades Totales", 0), errors="coerce").fillna(0)
+        agg = (
+            ven_art.groupby("vendedor", as_index=False)["Cantidades Totales"]
+            .sum()
+            .rename(columns={"vendedor": "Vendedor"})
+            .sort_values("Cantidades Totales", ascending=False)
+        )
+        agg["Cantidades Totales"] = agg["Cantidades Totales"].apply(lambda x: f"{x:,.2f}")
+
+        return agg.to_dict("records"), columnas
+
     # ── Dashboard principal ──────────────────────────────────────
     @app.callback(
         Output("kpis",           "children"),
-        Output("motivos_bar",    "figure"),
+        Output("motivos_detalle_tbl", "data"),
+        Output("motivos_detalle_tbl", "columns"),
         Output("mix_bar",        "figure"),
         Output("mix_varios_bar", "figure"),
         Output("mix_obj_box",    "children"),
@@ -110,8 +185,10 @@ def register(app):
         Input("f_month",    "value"),
         Input("f_week",     "value"),
         Input("f_vend",     "value"),
+        Input("f_motivos_filtro", "value"),
+        Input("f_ruta_filtro",    "value"),
     )
-    def refresh(n_clicks, year, month, week, vend):
+    def refresh(n_clicks, year, month, week, vend, motivos_sel, ruta_sel):
         empty_fig = px.bar(pd.DataFrame({"x": [], "y": []}), x="x", y="y")
         empty_fig.update_layout(**PLOTLY_LAYOUT, margin=DEFAULT_MARGIN, xaxis=AXIS_STYLE, yaxis=AXIS_STYLE)
 
@@ -132,21 +209,45 @@ def register(app):
             kpi_card("Cant. Varios",      f"{k['Cantidades Varios']:,.2f}"),
         ]
 
-        # ── Gráfico motivos ──────────────────────────────────────
-        fig_motivos = empty_fig
+        # ── Tabla de detalle de Motivos de No Venta (por cliente) ──
+        motivos_detalle_data, motivos_detalle_cols = [], []
         if len(vis_f) > 0 and "Hora motivo" in vis_f.columns and "Motivo" in vis_f.columns:
             mdf = vis_f[vis_f["Hora motivo"].notna()].copy()
             mdf["Motivo"] = mdf["Motivo"].astype(str).str.strip().replace({"": "SIN MOTIVO", "nan": "SIN MOTIVO", "None": "SIN MOTIVO"})
-            if len(mdf) > 0:
-                motivos = mdf.groupby("Motivo", as_index=False).size().sort_values("size", ascending=False)
-                fig_motivos = px.bar(motivos, x="Motivo", y="size", text="size", color_discrete_sequence=["#3b82f6"])
-                fig_motivos.update_traces(textposition="outside", cliponaxis=False,
-                                          textfont=dict(color="#e2e8f0", size=13, family=FONT),
-                                          marker=dict(color="#3b82f6", opacity=0.85, line=dict(width=0)))
-                ymax = motivos["size"].max() * 1.18
-                fig_motivos.update_layout(**PLOTLY_LAYOUT, margin=DEFAULT_MARGIN,
-                                          xaxis=AXIS_STYLE, yaxis={**AXIS_STYLE, "range": [0, ymax], "automargin": True},
-                                          uniformtext_minsize=11, uniformtext_mode="hide", bargap=0.35)
+
+            cols_detalle = {
+                "vendedor":             "Vendedor",
+                "Descripción cliente":  "Cliente",
+                "Domicilio":            "Domicilio",
+                "Ruta":                 "Día de ruta",
+                "Motivo":               "Motivo",
+                "date":                 "Fecha",
+            }
+            cols_presentes = [c for c in cols_detalle if c in mdf.columns]
+            if cols_presentes:
+                detalle = mdf[cols_presentes].rename(columns=cols_detalle).copy()
+                if "Día de ruta" in detalle.columns:
+                    # Extraemos el día de la semana del texto de "Ruta" (ej:
+                    # "19- LUNES" -> "LUNES"), sin importar el número de ruta,
+                    # para poder filtrar solo por el día sin depender del
+                    # formato exacto de cada vendedor.
+                    detalle["Día de ruta"] = detalle["Día de ruta"].astype(str).str.strip()
+                if motivos_sel and "Motivo" in detalle.columns:
+                    detalle = detalle[detalle["Motivo"].isin(motivos_sel)]
+                if ruta_sel and "Día de ruta" in detalle.columns:
+                    dia_extraido = (
+                        detalle["Día de ruta"].str.split("-").str[-1]
+                        .str.strip().str.upper()
+                        .str.normalize("NFKD").str.encode("ascii", errors="ignore").str.decode("utf-8")
+                    )
+                    ruta_sel_norm = [r.upper() for r in ruta_sel]
+                    detalle = detalle[dia_extraido.isin(ruta_sel_norm)]
+                if "Fecha" in detalle.columns:
+                    detalle["Fecha"] = pd.to_datetime(detalle["Fecha"], errors="coerce").dt.strftime("%d/%m/%Y")
+                orden_col = "Fecha" if "Fecha" in detalle.columns else detalle.columns[0]
+                detalle = detalle.sort_values(orden_col, ascending=False)
+                motivos_detalle_data = detalle.to_dict("records")
+                motivos_detalle_cols = [{"name": c, "id": c} for c in detalle.columns]
 
         # ── Gráfico mix (Cigarrillos + Varios) ───────────────────
         fig_mix        = empty_fig
@@ -248,7 +349,8 @@ def register(app):
             inactivos_data = inactivos_f.to_dict("records")
             inactivos_cols = [{"name": c, "id": c} for c in inactivos_f.columns]
 
-        return (kpis, fig_motivos, fig_mix, fig_mix_varios, mix_obj_children,
+        return (kpis, motivos_detalle_data, motivos_detalle_cols,
+                fig_mix, fig_mix_varios, mix_obj_children,
                 ventas_sem_data, ventas_sem_cols, jornada_data, jornada_cols,
                 inactivos_data, inactivos_cols)
 
@@ -313,6 +415,41 @@ def register(app):
                 ws.column_dimensions[col_cells[0].column_letter].width = max_len + 2
         output.seek(0)
         parts = ["jornada"]
+        if year:  parts.append(str(year))
+        if month: parts.append(f"{int(month):02d}")
+        if vend:  parts.append(re.sub(r"[^A-Z0-9]+", "_", str(vend).upper()).strip("_"))
+        return dcc.send_bytes(output.getvalue(), "_".join(parts) + ".xlsx")
+
+    # ── Descarga Excel de la tabla de Motivos de No Venta ────────
+    # Usa "derived_virtual_data": lo que está REALMENTE visible en la tabla
+    # en ese momento (con los filtros propios de la tabla aplicados,
+    # además de los de arriba), no solo los datos crudos sin filtrar.
+    @app.callback(
+        Output("download_motivos_excel", "data"),
+        Input("btn_download_motivos", "n_clicks"),
+        State("motivos_detalle_tbl", "derived_virtual_data"),
+        State("motivos_detalle_tbl", "data"),
+        State("f_year",  "value"),
+        State("f_month", "value"),
+        State("f_vend",  "value"),
+        prevent_initial_call=True,
+    )
+    def download_motivos_excel(n_clicks, derived_data, data, year, month, vend):
+        filas = derived_data if derived_data is not None else (data or [])
+        df = pd.DataFrame(filas)
+        if df.empty:
+            df = pd.DataFrame(columns=["Vendedor", "Cliente", "Domicilio", "Día de ruta", "Motivo", "Fecha"])
+
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="Motivos")
+            ws = writer.book["Motivos"]
+            for col_cells in ws.columns:
+                max_len = max((len(str(c.value or "")) for c in col_cells), default=0)
+                ws.column_dimensions[col_cells[0].column_letter].width = max_len + 2
+        output.seek(0)
+
+        parts = ["motivos_no_venta"]
         if year:  parts.append(str(year))
         if month: parts.append(f"{int(month):02d}")
         if vend:  parts.append(re.sub(r"[^A-Z0-9]+", "_", str(vend).upper()).strip("_"))

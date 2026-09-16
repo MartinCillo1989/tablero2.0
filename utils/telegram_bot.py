@@ -107,18 +107,30 @@ def esta_registrado(usuario: str) -> bool:
 # ======================================================
 # ENVÍO DE MENSAJES
 # ======================================================
-def _enviar_mensaje(chat_id, texto: str):
+def _enviar_mensaje(chat_id, texto: str) -> bool:
+    """Envía un mensaje por Telegram. Devuelve True si Telegram confirmó la
+    entrega (status 200 y 'ok': true), False en cualquier otro caso."""
     if not TELEGRAM_API:
         print("⚠️  TELEGRAM_BOT_TOKEN no configurado — no se puede enviar el mensaje.")
-        return
+        return False
     try:
-        requests.post(
+        r = requests.post(
             f"{TELEGRAM_API}/sendMessage",
             json={"chat_id": chat_id, "text": texto, "parse_mode": "HTML"},
             timeout=10,
         )
+        try:
+            data = r.json()
+        except Exception:
+            data = {}
+        if r.status_code != 200 or not data.get("ok", False):
+            print(f"⚠️  Telegram rechazó el mensaje a chat_id={chat_id}: "
+                  f"status={r.status_code} respuesta={data}")
+            return False
+        return True
     except Exception as e:
-        print("⚠️  Error enviando mensaje Telegram:", e)
+        print(f"⚠️  Error enviando mensaje Telegram a chat_id={chat_id}:", e)
+        return False
 
 
 # ======================================================
@@ -170,7 +182,7 @@ def iniciar_listener(vendedor_map: dict, supervisores: set = None):
         _enviar_mensaje(
             chat_id,
             f"✅ ¡Listo, <b>{nombre_completo}</b>!\n"
-            f"Vas a recibir tus objetivos de Corona y Pier &amp; Roll "
+            f"Vas a recibir tus objetivos de Corona, Pier &amp; Roll y Cobertura "
             f"todos los días a las {HORA_ENVIO_TELEGRAM}."
         )
 
@@ -209,6 +221,12 @@ def iniciar_listener(vendedor_map: dict, supervisores: set = None):
                 if not msg:
                     continue
                 chat_id = msg["chat"]["id"]
+
+                # Si este chat ya está registrado (vendedor o supervisor), no
+                # respondemos NADA más — ignoramos el mensaje en silencio.
+                if chat_id in chats.values():
+                    continue
+
                 texto   = str(msg.get("text", "")).strip()
                 texto_low = texto.lower()
 
@@ -242,66 +260,71 @@ def iniciar_listener(vendedor_map: dict, supervisores: set = None):
 # ======================================================
 # ARMADO DE MENSAJE POR VENDEDOR (para el propio vendedor)
 # ======================================================
-def _armar_mensaje(nombre_completo: str, df_corona_raw, df_pr_raw, dias_restantes) -> str:
+def _armar_mensaje(nombre_completo: str, df_corona_raw, df_pr_raw, df_cob_raw, dias_restantes) -> str:
     lineas = [f"📊 <b>Tus objetivos — {nombre_completo}</b>", ""]
 
-    # ── Corona (con cálculo de unidades/día) ─────────────
+    # ── Corona ────────────────────────────────────────────
     fila_c = df_corona_raw[df_corona_raw["vendedor"] == nombre_completo] if (df_corona_raw is not None and not df_corona_raw.empty) else None
     if fila_c is not None and not fila_c.empty:
         corona     = float(fila_c.iloc[0]["corona"])
         obj_corona = float(fila_c.iloc[0]["obj_corona"])
-        pct        = float(fila_c.iloc[0]["pct"])  # ya es corona/base*100 (0-20% es el objetivo)
+        pct        = (corona / obj_corona * 100) if obj_corona > 0 else 0.0  # 100% = objetivo cumplido
         cumple     = corona >= obj_corona - 1e-9
-        faltante   = max(obj_corona - corona, 0)
 
         lineas.append(
-            f"🚬 <b>Corona</b>: {corona:,.2f} / {obj_corona:,.2f} "
+            f"🚬 <b>Corona</b>: {corona:,.2f} (Bultos vendidos) / {obj_corona:,.2f} (Bultos objetivo) "
             f"({pct:.1f}%) {'✅' if cumple else '❌'}"
         )
-
-        if not cumple:
-            if dias_restantes is None:
-                pass  # mes distinto al actual, no aplica
-            elif dias_restantes > 0:
-                por_dia = faltante / dias_restantes
-                lineas.append(
-                    f"   👉 Te faltan {faltante:,.2f} unidades de Corona. Con {dias_restantes} "
-                    f"día{'s' if dias_restantes != 1 else ''} hábil{'es' if dias_restantes != 1 else ''} "
-                    f"que quedan en el mes, necesitás vender {por_dia:.2f}/día para llegar."
-                )
-            else:
-                lineas.append("   ⏰ Ya no quedan días hábiles este mes para llegar al objetivo de Corona.")
     else:
         lineas.append("🚬 <b>Corona</b>: sin datos este mes.")
 
-    # ── Pier & Roll (con cálculo de blisters/día) ────────
+    # ── Pier & Roll ───────────────────────────────────────
     fila_p = df_pr_raw[df_pr_raw["vendedor"] == nombre_completo] if (df_pr_raw is not None and not df_pr_raw.empty) else None
     if fila_p is not None and not fila_p.empty:
         blisters = float(fila_p.iloc[0]["blisters_vendidos"])
         objetivo = float(fila_p.iloc[0]["objetivo_blisters"])
         pct      = (blisters / objetivo * 100) if objetivo > 0 else 0.0
         cumple   = blisters >= objetivo - 1e-9
-        faltante = max(objetivo - blisters, 0)
 
         lineas.append(
-            f"🍬 <b>Pier &amp; Roll</b>: {blisters:,.0f} / {objetivo:,.0f} "
+            f"📜 <b>Pier &amp; Roll</b>: {blisters:,.0f} / {objetivo:,.0f} "
             f"({pct:.1f}%) {'✅' if cumple else '❌'}"
         )
-
-        if not cumple:
-            if dias_restantes is None:
-                pass
-            elif dias_restantes > 0:
-                por_dia = faltante / dias_restantes
-                lineas.append(
-                    f"   👉 Te faltan {faltante:,.0f} blisters. Con {dias_restantes} "
-                    f"día{'s' if dias_restantes != 1 else ''} hábil{'es' if dias_restantes != 1 else ''} "
-                    f"que quedan en el mes, necesitás vender {por_dia:.1f}/día para llegar."
-                )
-            else:
-                lineas.append("   ⏰ Ya no quedan días hábiles este mes para llegar al objetivo.")
     else:
-        lineas.append("🍬 <b>Pier &amp; Roll</b>: sin datos este mes.")
+        lineas.append("📜 <b>Pier &amp; Roll</b>: sin datos este mes.")
+
+    # ── Objetivos Shelfy (compradores / exhibición / alteo / activación) ──
+    try:
+        from utils.shelfy_client import get_objetivos_vendedor
+        hoy = date.today()
+        objetivos_shelfy = get_objetivos_vendedor(nombre_completo, hoy.year, hoy.month)
+    except Exception as e:
+        objetivos_shelfy = []
+        print("⚠️  Error consultando objetivos de Shelfy:", e)
+
+    if objetivos_shelfy:
+        for obj in objetivos_shelfy:
+            lineas.append(
+                f"{obj['label']}: {obj['actual']:,.0f} / {obj['objetivo']:,.0f} "
+                f"({obj['pct']:.0f}%) {'✅' if obj['cumplido'] else '❌'}"
+            )
+
+    # ── Cobertura (informativo, no es un objetivo más) ───────
+    lineas.append("")
+    fila_cob = df_cob_raw[df_cob_raw["vendedor"] == nombre_completo] if (df_cob_raw is not None and not df_cob_raw.empty) else None
+    if fila_cob is not None and not fila_cob.empty:
+        visitados    = int(fila_cob.iloc[0]["visitados"])
+        total        = int(fila_cob.iloc[0]["total"])
+        pct          = float(fila_cob.iloc[0]["pct"])
+        objetivo_pct = float(fila_cob.iloc[0]["objetivo_pct"])
+        cumple       = pct >= objetivo_pct - 1e-9
+
+        lineas.append(
+            f"🗺️ <b>Cobertura</b>: {pct:.0f}% / {objetivo_pct:.0f}% "
+            f"{'✅' if cumple else '❌'} ({visitados} de {total} visitados)"
+        )
+    else:
+        lineas.append("🗺️ <b>Cobertura</b>: sin datos este mes.")
 
     return "\n".join(lineas)
 
@@ -363,33 +386,19 @@ def _variacion_txt(actual: float, previo: float) -> str:
     return f"{flecha} {abs(dif):.1f}%"
 
 
-def _armar_mensaje_supervisor_vendedor(nombre_completo: str, ven_df, jornada_df, df_corona_raw, df_pr_raw) -> str:
+def _armar_mensaje_supervisor_vendedor(nombre_completo: str, ven_df, jornada_df, df_corona_raw, df_pr_raw, df_cob_raw=None) -> str:
     inicio_actual, fin_actual, inicio_prev, fin_prev = _rango_mismo_periodo()
 
-    cant_actual = _cantidades_categoria_vendedor(ven_df, nombre_completo, inicio_actual, fin_actual)
-    cant_prev   = _cantidades_categoria_vendedor(ven_df, nombre_completo, inicio_prev,   fin_prev)
-
     lineas = [f"👤 <b>{nombre_completo}</b>"]
-
-    lineas.append(
-        f"📦 Cigarrillos: {cant_actual['Cigarrillos']:,.2f} "
-        f"(mismo período mes ant.: {cant_prev['Cigarrillos']:,.2f}, "
-        f"{_variacion_txt(cant_actual['Cigarrillos'], cant_prev['Cigarrillos'])})"
-    )
-    lineas.append(
-        f"🧃 Varios: {cant_actual['Varios']:,.2f} "
-        f"(mismo período mes ant.: {cant_prev['Varios']:,.2f}, "
-        f"{_variacion_txt(cant_actual['Varios'], cant_prev['Varios'])})"
-    )
 
     # Corona
     fila_c = df_corona_raw[df_corona_raw["vendedor"] == nombre_completo] if (df_corona_raw is not None and not df_corona_raw.empty) else None
     if fila_c is not None and not fila_c.empty:
         corona     = float(fila_c.iloc[0]["corona"])
         obj_corona = float(fila_c.iloc[0]["obj_corona"])
-        pct        = float(fila_c.iloc[0]["pct"])
+        pct        = (corona / obj_corona * 100) if obj_corona > 0 else 0.0  # 100% = objetivo cumplido
         cumple     = corona >= obj_corona - 1e-9
-        lineas.append(f"🚬 Corona: {corona:,.2f} / {obj_corona:,.2f} ({pct:.1f}%) {'✅' if cumple else '❌'}")
+        lineas.append(f"🚬 Corona: {corona:,.2f}(Bultos vendidos) / {obj_corona:,.2f} (Bultos objetivo), ({pct:.1f}%) {'✅' if cumple else '❌'}")
     else:
         lineas.append("🚬 Corona: sin datos este mes.")
 
@@ -400,9 +409,25 @@ def _armar_mensaje_supervisor_vendedor(nombre_completo: str, ven_df, jornada_df,
         objetivo = float(fila_p.iloc[0]["objetivo_blisters"])
         pct      = (blisters / objetivo * 100) if objetivo > 0 else 0.0
         cumple   = blisters >= objetivo - 1e-9
-        lineas.append(f"🍬 Pier &amp; Roll: {blisters:,.0f} / {objetivo:,.0f} ({pct:.1f}%) {'✅' if cumple else '❌'}")
+        lineas.append(f"📜 Pier &amp; Roll: {blisters:,.0f} (Blisters vendidos) / {objetivo:,.0f} (Blisters objetivo), ({pct:.1f}%) {'✅' if cumple else '❌'}")
     else:
-        lineas.append("🍬 Pier &amp; Roll: sin datos este mes.")
+        lineas.append("📜 Pier &amp; Roll: sin datos este mes.")
+
+    # Objetivos Shelfy (compradores / exhibición / alteo / activación)
+    try:
+        from utils.shelfy_client import get_objetivos_vendedor
+        hoy = date.today()
+        objetivos_shelfy = get_objetivos_vendedor(nombre_completo, hoy.year, hoy.month)
+    except Exception as e:
+        objetivos_shelfy = []
+        print("⚠️  Error consultando objetivos de Shelfy:", e)
+
+    if objetivos_shelfy:
+        for obj in objetivos_shelfy:
+            lineas.append(
+                f"{obj['label']}: {obj['actual']:,.0f} / {obj['objetivo']:,.0f} "
+                f"({obj['pct']:.0f}%) {'✅' if obj['cumplido'] else '❌'}"
+            )
 
     # Inicio ≤ 9:30 (mismo período, día 1 a hoy)
     cumplidos, total = _inicio_cumplimiento_vendedor(jornada_df, nombre_completo, inicio_actual, fin_actual)
@@ -411,6 +436,21 @@ def _armar_mensaje_supervisor_vendedor(nombre_completo: str, ven_df, jornada_df,
         lineas.append(f"🕒 Inicio ≤9:30: {cumplidos}/{total} días ({pct_inicio:.0f}%)")
     else:
         lineas.append("🕒 Inicio ≤9:30: sin datos este mes.")
+
+    # Cobertura
+    fila_cob = df_cob_raw[df_cob_raw["vendedor"] == nombre_completo] if (df_cob_raw is not None and not df_cob_raw.empty) else None
+    if fila_cob is not None and not fila_cob.empty:
+        visitados    = int(fila_cob.iloc[0]["visitados"])
+        total_cob    = int(fila_cob.iloc[0]["total"])
+        pct_cob      = float(fila_cob.iloc[0]["pct"])
+        objetivo_pct = float(fila_cob.iloc[0]["objetivo_pct"])
+        cumple_cob   = pct_cob >= objetivo_pct - 1e-9
+        lineas.append(
+            f"🗺️ Cobertura: {pct_cob:.0f}% / {objetivo_pct:.0f}% "
+            f"{'✅' if cumple_cob else '❌'} ({visitados} de {total_cob} visitados)"
+        )
+    else:
+        lineas.append("🗺️ Cobertura: sin datos este mes.")
 
     return "\n".join(lineas)
 
@@ -423,7 +463,7 @@ def enviar_objetivos_a_uno(vendedor_map: dict, nombre_completo: str, year=None, 
     tal como aparece en la columna 'vendedor' de ventas).
     Devuelve 'ok', 'no_registrado' o 'no_encontrado'."""
     from data.cache import CACHE
-    from logic.rankings import build_corona_raw, build_pier_roll_raw
+    from logic.rankings import build_corona_raw, build_pier_roll_raw, build_cobertura_raw
 
     if not TELEGRAM_API:
         print("⚠️  TELEGRAM_BOT_TOKEN no configurado — no se puede enviar.")
@@ -444,9 +484,10 @@ def enviar_objetivos_a_uno(vendedor_map: dict, nombre_completo: str, year=None, 
 
     df_corona_raw  = build_corona_raw(CACHE.ven, y, m)
     df_pr_raw      = build_pier_roll_raw(CACHE.ven, y, m)
+    df_cob_raw     = build_cobertura_raw(CACHE.vis, y, m)
     dias_restantes = _dias_habiles_restantes(y, m)
 
-    msg = _armar_mensaje(nombre_completo, df_corona_raw, df_pr_raw, dias_restantes)
+    msg = _armar_mensaje(nombre_completo, df_corona_raw, df_pr_raw, df_cob_raw, dias_restantes)
     _enviar_mensaje(chat_id, msg)
     return "ok"
 
@@ -457,7 +498,7 @@ def enviar_objetivos_a_uno(vendedor_map: dict, nombre_completo: str, year=None, 
 def enviar_objetivos_a_todos(vendedor_map: dict, year=None, month=None) -> int:
     """Devuelve la cantidad de mensajes enviados."""
     from data.cache import CACHE
-    from logic.rankings import build_corona_raw, build_pier_roll_raw
+    from logic.rankings import build_corona_raw, build_pier_roll_raw, build_cobertura_raw
 
     if not TELEGRAM_API:
         print("⚠️  TELEGRAM_BOT_TOKEN no configurado — no se puede enviar.")
@@ -474,6 +515,7 @@ def enviar_objetivos_a_todos(vendedor_map: dict, year=None, month=None) -> int:
 
     df_corona_raw  = build_corona_raw(CACHE.ven, y, m)
     df_pr_raw      = build_pier_roll_raw(CACHE.ven, y, m)
+    df_cob_raw     = build_cobertura_raw(CACHE.vis, y, m)
     dias_restantes = _dias_habiles_restantes(y, m)
 
     enviados = 0
@@ -481,7 +523,7 @@ def enviar_objetivos_a_todos(vendedor_map: dict, year=None, month=None) -> int:
         nombre_completo = vendedor_map.get(usuario)
         if not nombre_completo:
             continue
-        msg = _armar_mensaje(nombre_completo, df_corona_raw, df_pr_raw, dias_restantes)
+        msg = _armar_mensaje(nombre_completo, df_corona_raw, df_pr_raw, df_cob_raw, dias_restantes)
         _enviar_mensaje(chat_id, msg)
         enviados += 1
 
@@ -494,11 +536,11 @@ def enviar_objetivos_a_todos(vendedor_map: dict, year=None, month=None) -> int:
 # ======================================================
 def enviar_resumen_supervisores(vendedor_map: dict, supervisor_vendedores: dict, year=None, month=None) -> int:
     """Le manda a cada supervisor un mensaje de encabezado + un mensaje por
-    cada vendedor de su equipo, con cantidades, objetivos y cumplimiento de
-    inicio de jornada. Devuelve la cantidad de supervisores a los que se
-    les mandó algo (que ya estaban registrados)."""
+    cada vendedor de su equipo, con cantidades, objetivos, cobertura y
+    cumplimiento de inicio de jornada. Devuelve la cantidad de supervisores
+    a los que se les mandó algo (que ya estaban registrados)."""
     from data.cache import CACHE
-    from logic.rankings import build_corona_raw, build_pier_roll_raw
+    from logic.rankings import build_corona_raw, build_pier_roll_raw, build_cobertura_raw
 
     if not TELEGRAM_API:
         print("⚠️  TELEGRAM_BOT_TOKEN no configurado — no se puede enviar.")
@@ -515,6 +557,7 @@ def enviar_resumen_supervisores(vendedor_map: dict, supervisor_vendedores: dict,
 
     df_corona_raw = build_corona_raw(CACHE.ven, y, m)
     df_pr_raw     = build_pier_roll_raw(CACHE.ven, y, m)
+    df_cob_raw    = build_cobertura_raw(CACHE.vis, y, m)
     jornada_df    = getattr(CACHE, "jornada_all", None)
 
     enviados = 0
@@ -525,14 +568,19 @@ def enviar_resumen_supervisores(vendedor_map: dict, supervisor_vendedores: dict,
             continue
 
         fecha_txt = hoy.strftime("%d/%m/%Y")
-        _enviar_mensaje(chat_id, f"📋 <b>Resumen diario de tu equipo — {fecha_txt}</b>")
+        ok_header = _enviar_mensaje(chat_id, f"📋 <b>Resumen diario de tu equipo — {fecha_txt}</b>")
+        if not ok_header:
+            print(f"⚠️  No se pudo enviar el encabezado al supervisor '{supervisor_usuario}' (chat_id={chat_id}). Salteando su equipo.")
+            continue
 
         for usuario_vend in usuarios_vendedores:
             nombre_completo = vendedor_map.get(usuario_vend)
             if not nombre_completo:
                 continue
-            msg = _armar_mensaje_supervisor_vendedor(nombre_completo, CACHE.ven, jornada_df, df_corona_raw, df_pr_raw)
-            _enviar_mensaje(chat_id, msg)
+            msg = _armar_mensaje_supervisor_vendedor(nombre_completo, CACHE.ven, jornada_df, df_corona_raw, df_pr_raw, df_cob_raw)
+            ok = _enviar_mensaje(chat_id, msg)
+            if not ok:
+                print(f"⚠️  Falló el envío del vendedor '{usuario_vend}' al supervisor '{supervisor_usuario}'.")
 
         enviados += 1
 

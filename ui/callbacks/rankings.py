@@ -6,7 +6,10 @@ from dash import Input, Output, State, dcc
 from flask import request as flask_request
 
 from data.cache import CACHE
-from logic.rankings import build_rankings, build_corona_ranking, build_pier_roll_ranking
+from logic.rankings import (
+    build_rankings, build_corona_ranking, build_pier_roll_ranking,
+    build_cobertura_ranking,
+)
 from logic.resumen import build_inactivos_comparativo
 
 
@@ -25,6 +28,7 @@ def register(app):
         Output("tbl_inactivos_todos","data"),    Output("tbl_inactivos_todos","columns"),
         Output("tbl_corona",         "data"),    Output("tbl_corona",         "columns"),
         Output("tbl_pier_roll",      "data"),    Output("tbl_pier_roll",      "columns"),
+        Output("tbl_cobertura",      "data"),    Output("tbl_cobertura",      "columns"),
         Output("ranking_periodo_label","children"),
         Input("btn_reload", "n_clicks"),
         Input("f_year",     "value"),
@@ -56,6 +60,9 @@ def register(app):
             df_pier_roll     = build_pier_roll_ranking(CACHE.ven, year, month)
             d_pr, c_pr        = to_table(df_pier_roll)
 
+            df_cobertura      = build_cobertura_ranking(CACHE.vis, year, month)
+            d_cob, c_cob      = to_table(df_cobertura)
+
             df_inact = build_inactivos_comparativo()
             if isinstance(df_inact, pd.DataFrame) and not df_inact.empty:
                 orden = ["Cod. Vendedor", "Clientes en cartera", "Clientes con venta",
@@ -72,15 +79,15 @@ def register(app):
             d_inact, c_inact = to_table(df_inact)
 
             return (d_mej, c_mej, d_peo, c_peo, d_mjo, c_mjo, d_emp, c_emp,
-                    d_inact, c_inact, d_cor, c_cor, d_pr, c_pr, label)
+                    d_inact, c_inact, d_cor, c_cor, d_pr, c_pr, d_cob, c_cob, label)
 
         except Exception as e:
             traceback.print_exc()
             empty = []
             return (empty, empty, empty, empty, empty, empty, empty, empty,
-                    empty, empty, empty, empty, empty, empty, f"ERROR: {e}")
+                    empty, empty, empty, empty, empty, empty, empty, empty, f"ERROR: {e}")
 
-    # ── Descarga Excel unificado: Corona + Pier & Roll ──────────
+    # ── Descarga Excel unificado: Corona + Pier & Roll + Cobertura ──
     @app.callback(
         Output("download_objetivos_excel", "data"),
         Input("btn_download_objetivos", "n_clicks"),
@@ -91,11 +98,14 @@ def register(app):
     def download_objetivos_excel(n_clicks, year, month):
         df_corona    = build_corona_ranking(CACHE.ven, year, month)
         df_pier_roll = build_pier_roll_ranking(CACHE.ven, year, month)
+        df_cobertura = build_cobertura_ranking(CACHE.vis, year, month)
 
         if not isinstance(df_corona, pd.DataFrame):
             df_corona = pd.DataFrame()
         if not isinstance(df_pier_roll, pd.DataFrame):
             df_pier_roll = pd.DataFrame()
+        if not isinstance(df_cobertura, pd.DataFrame):
+            df_cobertura = pd.DataFrame()
 
         output = BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -128,13 +138,27 @@ def register(app):
                 ws.cell(row=row, column=1, value="Sin datos para el período seleccionado.")
                 row += 1
 
+            row += 2  # espacio en blanco entre tablas
+
+            # ── Bloque Cobertura ─────────────────────────────────
+            from config import COBERTURA_OBJETIVO_PCT
+            ws.cell(row=row, column=1,
+                    value=f"OBJETIVO COBERTURA — Cumplimiento por Vendedor (mínimo {COBERTURA_OBJETIVO_PCT:.0f}% de clientes visitados)")
+            row += 2
+            if not df_cobertura.empty:
+                df_cobertura.to_excel(writer, sheet_name=sheet_name, index=False, startrow=row - 1)
+                row += len(df_cobertura) + 1
+            else:
+                ws.cell(row=row, column=1, value="Sin datos para el período seleccionado.")
+                row += 1
+
             # Autoajustar ancho de columnas
             for col_cells in ws.columns:
                 max_len = max((len(str(c.value or "")) for c in col_cells), default=0)
                 ws.column_dimensions[col_cells[0].column_letter].width = max_len + 2
 
         output.seek(0)
-        parts = ["objetivos_corona_pier_roll"]
+        parts = ["objetivos_corona_pier_roll_cobertura"]
         if year:  parts.append(str(year))
         if month: parts.append(f"{int(month):02d}")
         return dcc.send_bytes(output.getvalue(), "_".join(parts) + ".xlsx")
@@ -228,3 +252,20 @@ def register(app):
         if existia:
             return f"✅ Registro de {usuario} reseteado. Ya puede volver a registrarse."
         return f"ℹ️ {usuario} no estaba registrado en Telegram."
+
+    # ── Mostrar solo el ranking elegido en el dropdown ────────────
+    @app.callback(
+        Output("rank_wrap_mejores",    "style"),
+        Output("rank_wrap_peores",     "style"),
+        Output("rank_wrap_mejoraron",  "style"),
+        Output("rank_wrap_empeoraron", "style"),
+        Output("rank_wrap_inactivos",  "style"),
+        Output("rank_wrap_corona",     "style"),
+        Output("rank_wrap_pier_roll",  "style"),
+        Output("rank_wrap_cobertura",  "style"),
+        Input("f_ranking_tipo", "value"),
+    )
+    def toggle_ranking_view(tipo):
+        claves = ["mejores", "peores", "mejoraron", "empeoraron",
+                  "inactivos", "corona", "pier_roll", "cobertura"]
+        return [{"display": "block"} if tipo == c else {"display": "none"} for c in claves]
